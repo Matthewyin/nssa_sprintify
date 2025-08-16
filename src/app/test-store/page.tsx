@@ -6,7 +6,7 @@ import { useAuthStore, useSprintStore, useSettingsStore } from "@/stores"
 
 export default function TestStorePage() {
   const { user, isAuthenticated, login, logout } = useAuthStore()
-  const { sprints, currentSprint, createSprint, addTask } = useSprintStore()
+  const { sprints, currentSprint, createSprint, createTask } = useSprintStore()
   const { theme, language, setTheme, setLanguage } = useSettingsStore()
 
   useEffect(() => {
@@ -30,7 +30,7 @@ export default function TestStorePage() {
 
   const handleAddTask = async () => {
     if (currentSprint) {
-      await addTask(currentSprint.id, {
+      await createTask(currentSprint.id, {
         title: '测试任务',
         description: '这是一个测试任务',
         priority: 'medium',
@@ -96,7 +96,7 @@ export default function TestStorePage() {
                   <div className="text-sm space-y-1">
                     <p>类型: {currentSprint.type}</p>
                     <p>模板: {currentSprint.template}</p>
-                    <p>任务数: {currentSprint.tasks.length}</p>
+                    <p>任务数: {currentSprint.stats.totalTasks}</p>
                   </div>
                 )}
               </div>
@@ -190,7 +190,7 @@ export default function TestStorePage() {
                         <Badge size="sm">{sprint.type}</Badge>
                         <Badge size="sm" variant="secondary">{sprint.template}</Badge>
                         <Badge size="sm" variant="outline">
-                          {sprint.tasks.length} 任务
+                          {sprint.stats.totalTasks} 任务
                         </Badge>
                       </div>
                     </div>
