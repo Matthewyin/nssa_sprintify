@@ -3,6 +3,17 @@ import withPWA from "next-pwa";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  typescript: {
+    ignoreBuildErrors: false,
+  },
+  eslint: {
+    ignoreDuringBuilds: false,
+    dirs: ['src'], // 只检查src目录
+  },
+  // 排除functions目录
+  outputFileTracingExcludes: {
+    '*': ['./functions/**/*'],
+  },
 };
 
 export default withPWA({

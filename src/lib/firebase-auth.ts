@@ -61,7 +61,7 @@ export async function registerUser(
     // 初始化用户数据结构
     await initializeUserData(firebaseUser.uid, {
       email: user.email,
-      displayName: user.displayName,
+      displayName: user.displayName || user.email.split('@')[0],
       userType: user.userType
     })
 
