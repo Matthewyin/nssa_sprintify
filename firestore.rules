@@ -1,0 +1,145 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 用户数据访问规则
+    match /users/{userId} {
+      // 用户只能访问自己的数据
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // 用户基本信息
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId
+        && validateUserData(request.resource.data);
+      
+      // 用户设置
+      match /settings/{settingId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // 冲刺计划
+      match /sprints/{sprintId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId
+          && validateSprintData(request.resource.data);
+        
+        // 冲刺任务
+        match /tasks/{taskId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId
+            && validateTaskData(request.resource.data);
+        }
+        
+        // 冲刺阶段
+        match /phases/{phaseId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+        
+        // 冲刺里程碑
+        match /milestones/{milestoneId} {
+          allow read, write: if request.auth != null && request.auth.uid == userId;
+        }
+      }
+      
+      // AI使用统计
+      match /aiUsage/{date} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId
+          && validateAIUsageData(request.resource.data);
+      }
+      
+      // 用户统计数据
+      match /stats/{statId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // AI对话历史
+      match /aiHistory/{conversationId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      // Obsidian知识图谱数据
+      match /knowledgeGraph/{nodeId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // 管理员访问规则
+    match /{document=**} {
+      allow read, write: if request.auth != null && isAdmin(request.auth.uid);
+    }
+    
+    // 数据验证函数
+    function validateUserData(data) {
+      return data.keys().hasAll(['email', 'displayName', 'userType']) &&
+             data.email is string &&
+             data.displayName is string &&
+             data.userType in ['normal', 'premium', 'admin'];
+    }
+    
+    function validateSprintData(data) {
+      return data.keys().hasAll(['title', 'description', 'type', 'template', 'status']) &&
+             data.title is string &&
+             data.title.size() > 0 &&
+             data.title.size() <= 100 &&
+             data.description is string &&
+             data.description.size() <= 500 &&
+             data.type in ['learning', 'project'] &&
+             data.template in ['7days', '21days', '30days', '60days', '90days'] &&
+             data.status in ['draft', 'active', 'paused', 'completed', 'cancelled'];
+    }
+    
+    function validateTaskData(data) {
+      return data.keys().hasAll(['title', 'status', 'priority']) &&
+             data.title is string &&
+             data.title.size() > 0 &&
+             data.title.size() <= 200 &&
+             data.status in ['todo', 'in-progress', 'completed', 'cancelled'] &&
+             data.priority in ['low', 'medium', 'high'];
+    }
+    
+    function validateAIUsageData(data) {
+      return data.keys().hasAll(['userId', 'date', 'count', 'limit']) &&
+             data.userId is string &&
+             data.date is string &&
+             data.count is number &&
+             data.count >= 0 &&
+             data.limit is number &&
+             data.limit > 0;
+    }
+    
+    function isAdmin(userId) {
+      // 检查用户是否为管理员
+      // 这里可以通过查询用户文档或使用自定义声明
+      return exists(/databases/$(database)/documents/users/$(userId)) &&
+             get(/databases/$(database)/documents/users/$(userId)).data.userType == 'admin';
+    }
+    
+    // 时间验证函数
+    function isValidTimestamp(timestamp) {
+      return timestamp is timestamp;
+    }
+    
+    // 字符串长度验证
+    function isValidStringLength(str, minLength, maxLength) {
+      return str is string && 
+             str.size() >= minLength && 
+             str.size() <= maxLength;
+    }
+    
+    // 数组长度验证
+    function isValidArrayLength(arr, maxLength) {
+      return arr is list && arr.size() <= maxLength;
+    }
+    
+    // 邮箱格式验证
+    function isValidEmail(email) {
+      return email is string && email.matches('.*@.*\\..*');
+    }
+    
+    // URL格式验证
+    function isValidUrl(url) {
+      return url is string && 
+             (url.matches('https://.*') || url.matches('http://.*'));
+    }
+  }
+}

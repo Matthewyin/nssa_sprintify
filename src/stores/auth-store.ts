@@ -1,6 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { User, LoginForm, RegisterForm } from '@/types'
+import {
+  loginUser,
+  registerUser,
+  logoutUser,
+  onAuthStateChange,
+  getCurrentUser,
+  getUserData,
+  updateUserProfile
+} from '@/lib/firebase-auth'
 
 interface AuthState {
   // 状态
@@ -33,31 +42,19 @@ export const useAuthStore = create<AuthState>()(
       // 登录
       login: async (credentials: LoginForm) => {
         set({ isLoading: true, error: null })
-        
+
         try {
-          // TODO: 实现Firebase Auth登录
-          // const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password)
-          // const user = userCredential.user
-          
-          // 临时模拟登录
-          const mockUser: User = {
-            id: 'mock-user-id',
-            email: credentials.email,
-            displayName: credentials.email.split('@')[0],
-            userType: 'normal',
-            createdAt: new Date(),
-            updatedAt: new Date()
-          }
-          
-          set({ 
-            user: mockUser, 
-            isAuthenticated: true, 
-            isLoading: false 
+          const { user } = await loginUser(credentials.email, credentials.password)
+
+          set({
+            user,
+            isAuthenticated: true,
+            isLoading: false
           })
         } catch (error) {
-          set({ 
-            error: error instanceof Error ? error.message : '登录失败', 
-            isLoading: false 
+          set({
+            error: error instanceof Error ? error.message : '登录失败',
+            isLoading: false
           })
         }
       },
@@ -65,50 +62,46 @@ export const useAuthStore = create<AuthState>()(
       // 注册
       register: async (userData: RegisterForm) => {
         set({ isLoading: true, error: null })
-        
+
         try {
           // 验证密码确认
           if (userData.password !== userData.confirmPassword) {
             throw new Error('密码确认不匹配')
           }
-          
-          // TODO: 实现Firebase Auth注册
-          // const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password)
-          // const user = userCredential.user
-          
-          // 临时模拟注册
-          const mockUser: User = {
-            id: 'mock-user-id',
-            email: userData.email,
-            displayName: userData.email.split('@')[0],
-            userType: 'normal',
-            createdAt: new Date(),
-            updatedAt: new Date()
-          }
-          
-          set({ 
-            user: mockUser, 
-            isAuthenticated: true, 
-            isLoading: false 
+
+          const { user } = await registerUser(
+            userData.email,
+            userData.password,
+            userData.email.split('@')[0]
+          )
+
+          set({
+            user,
+            isAuthenticated: true,
+            isLoading: false
           })
         } catch (error) {
-          set({ 
-            error: error instanceof Error ? error.message : '注册失败', 
-            isLoading: false 
+          set({
+            error: error instanceof Error ? error.message : '注册失败',
+            isLoading: false
           })
         }
       },
 
       // 登出
-      logout: () => {
-        // TODO: 实现Firebase Auth登出
-        // await signOut(auth)
-        
-        set({ 
-          user: null, 
-          isAuthenticated: false, 
-          error: null 
-        })
+      logout: async () => {
+        try {
+          await logoutUser()
+          set({
+            user: null,
+            isAuthenticated: false,
+            error: null
+          })
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : '登出失败'
+          })
+        }
       },
 
       // 清除错误
@@ -125,40 +118,64 @@ export const useAuthStore = create<AuthState>()(
       },
 
       // 更新用户信息
-      updateUser: (updates: Partial<User>) => {
+      updateUser: async (updates: Partial<User>) => {
         const { user } = get()
         if (user) {
-          set({ 
-            user: { 
-              ...user, 
-              ...updates, 
-              updatedAt: new Date() 
-            } 
-          })
+          try {
+            await updateUserProfile(user.id, updates)
+            set({
+              user: {
+                ...user,
+                ...updates,
+                updatedAt: new Date()
+              }
+            })
+          } catch (error) {
+            set({
+              error: error instanceof Error ? error.message : '更新用户信息失败'
+            })
+          }
         }
       },
 
       // 初始化认证状态
       initialize: async () => {
         set({ isLoading: true })
-        
+
         try {
-          // TODO: 实现Firebase Auth状态监听
-          // onAuthStateChanged(auth, (user) => {
-          //   if (user) {
-          //     // 用户已登录，获取用户信息
-          //   } else {
-          //     // 用户未登录
-          //     set({ user: null, isAuthenticated: false, isLoading: false })
-          //   }
-          // })
-          
-          // 临时处理
-          set({ isLoading: false })
+          // 设置认证状态监听
+          onAuthStateChange(async (firebaseUser) => {
+            if (firebaseUser) {
+              // 用户已登录，获取用户数据
+              const userData = await getUserData(firebaseUser.uid)
+              if (userData) {
+                set({
+                  user: userData,
+                  isAuthenticated: true,
+                  isLoading: false
+                })
+              } else {
+                // 用户数据不存在，可能需要重新创建
+                set({
+                  user: null,
+                  isAuthenticated: false,
+                  isLoading: false,
+                  error: '用户数据不存在'
+                })
+              }
+            } else {
+              // 用户未登录
+              set({
+                user: null,
+                isAuthenticated: false,
+                isLoading: false
+              })
+            }
+          })
         } catch (error) {
-          set({ 
-            error: error instanceof Error ? error.message : '初始化失败', 
-            isLoading: false 
+          set({
+            error: error instanceof Error ? error.message : '初始化失败',
+            isLoading: false
           })
         }
       }
