@@ -1,8 +1,12 @@
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Progress, Badge, Input } from "@/components/ui"
+import { Navigation } from "@/components/navigation"
+import { PermissionGuard, FeatureGuard } from "@/components/permission-guard"
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-background p-8">
+    <div className="min-h-screen bg-background">
+      <Navigation />
+      <div className="p-8">
       <div className="max-w-4xl mx-auto space-y-8">
         {/* 页面标题 */}
         <div className="text-center space-y-4">
@@ -124,6 +128,7 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );
