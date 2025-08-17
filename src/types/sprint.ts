@@ -226,6 +226,7 @@ export interface UpdateTaskRequest {
   notes?: string
   completedAt?: Date
   startedAt?: Date
+  updatedAt?: Date
 }
 
 /**
