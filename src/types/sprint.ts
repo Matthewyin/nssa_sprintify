@@ -51,6 +51,8 @@ export interface SprintInfo {
     totalTime: number // 预估总时间（分钟）
     actualTime: number // 实际花费时间（分钟）
     completionRate: number // 完成率
+    totalMilestones: number
+    completedMilestones: number
   }
   
   // 标签和分类

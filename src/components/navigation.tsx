@@ -16,7 +16,9 @@ import {
   BellIcon,
   ArrowRightOnRectangleIcon,
   HomeIcon,
-  PlusIcon
+  PlusIcon,
+  PresentationChartLineIcon,
+  Square3Stack3DIcon
 } from '@heroicons/react/24/outline'
 
 export function Navigation() {
@@ -39,9 +41,9 @@ export function Navigation() {
       show: true
     },
     {
-      name: '创建冲刺',
-      href: '/sprints/create',
-      icon: PlusIcon,
+      name: '仪表盘',
+      href: '/dashboard',
+      icon: Square3Stack3DIcon,
       show: isAuthenticated
     },
     {
@@ -51,10 +53,16 @@ export function Navigation() {
       show: isAuthenticated
     },
     {
-      name: '数据统计',
-      href: '/stats',
-      icon: ChartBarIcon,
-      show: isAuthenticated && isPremium
+      name: '创建冲刺',
+      href: '/sprints/create',
+      icon: PlusIcon,
+      show: isAuthenticated
+    },
+    {
+      name: '数据分析',
+      href: '/analytics',
+      icon: PresentationChartLineIcon,
+      show: isAuthenticated
     },
     {
       name: '用户管理',

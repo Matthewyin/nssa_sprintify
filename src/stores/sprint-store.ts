@@ -127,7 +127,9 @@ export const useSprintStore = create<SprintState>()(
               completedTasks: 0,
               totalTime: 0,
               actualTime: 0,
-              completionRate: 0
+              completionRate: 0,
+              totalMilestones: 0,
+              completedMilestones: 0
             },
             tags: request.tags || [],
             category: request.category,
