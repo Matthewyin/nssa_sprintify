@@ -18,7 +18,8 @@ import {
   HomeIcon,
   PlusIcon,
   PresentationChartLineIcon,
-  Square3Stack3DIcon
+  Square3Stack3DIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
 
 export function Navigation() {
@@ -52,12 +53,22 @@ export function Navigation() {
       icon: ChartBarIcon,
       show: isAuthenticated
     },
+    
     {
       name: '创建冲刺',
       href: '/sprints/create',
       icon: PlusIcon,
       show: isAuthenticated
     },
+    /*
+    {
+      name: 'AI生成计划',
+      href: '/ai-generator',
+      icon: SparklesIcon,
+      show: isAuthenticated,
+      badge: isPremium || isAdmin ? undefined : 'NEW'
+    },
+    */
     {
       name: '数据分析',
       href: '/analytics',
@@ -100,11 +111,13 @@ export function Navigation() {
             {/* Logo */}
             <Link href="/" className="flex items-center">
               <div className="flex-shrink-0 flex items-center">
-                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">S</span>
-                </div>
-                <span className="ml-2 text-xl font-bold text-foreground">
-                  冲刺管理
+                <img
+                  src="/logo.svg"
+                  alt="NSSA Sprintify"
+                  className="h-8 w-auto"
+                />
+                <span className="ml-3 text-xl font-bold text-foreground">
+                  NSSA Sprintify
                 </span>
               </div>
             </Link>

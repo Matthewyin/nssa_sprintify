@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button, Card, CardHeader, CardTitle, CardContent, Input, Badge } from "@/components/ui"
 import { Navigation } from "@/components/navigation"
 import { PermissionGuard } from "@/components/permission-guard"
@@ -9,19 +9,23 @@ import { useSprintStore } from "@/stores/sprint-store"
 import { SPRINT_TEMPLATES, getTemplateInfo, calculateTemplateRecommendations } from "@/lib/sprint-templates"
 import { SprintType, SprintTemplate, SprintDifficulty, CreateSprintRequest } from "@/types/sprint"
 import { isValidSprintTitle, isValidDateRange } from "@/lib/validations"
-import { 
-  CalendarIcon, 
-  ClockIcon, 
+import AIPlanGenerator from "@/components/ai/AIPlanGenerator"
+import type { AIGeneratedPlan } from "@/lib/ai-plan-generator"
+import {
+  CalendarIcon,
+  ClockIcon,
   AcademicCapIcon,
   BriefcaseIcon,
   StarIcon,
-  ArrowLeftIcon
+  ArrowLeftIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
 
 export default function CreateSprintPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { createSprint, isCreating, error, clearError } = useSprintStore()
-  
+
   const [formData, setFormData] = useState<CreateSprintRequest>({
     title: '',
     description: '',
@@ -31,10 +35,15 @@ export default function CreateSprintPage() {
     startDate: new Date(),
     tags: []
   })
-  
+
   const [formErrors, setFormErrors] = useState<Record<string, string[]>>({})
   const [selectedTemplate, setSelectedTemplate] = useState<SprintTemplate>('30days')
   const [customDuration, setCustomDuration] = useState<number>(30)
+  const [showAIGenerator, setShowAIGenerator] = useState(false)
+  const [aiGeneratedPlan, setAiGeneratedPlan] = useState<AIGeneratedPlan | null>(null)
+
+  // 检查是否从AI生成页面跳转过来
+  const fromAI = searchParams.get('from') === 'ai'
 
   // 清除错误信息
   useEffect(() => {
@@ -96,6 +105,17 @@ export default function CreateSprintPage() {
         endDate: new Date(formData.startDate.getTime() + recommendations.duration * 24 * 60 * 60 * 1000)
       }
 
+      console.log('🔍 发送的Sprint数据:', sprintRequest)
+      console.log('🔍 各字段检查:', {
+        title: sprintRequest.title,
+        description: sprintRequest.description,
+        type: sprintRequest.type,
+        template: sprintRequest.template,
+        startDate: sprintRequest.startDate,
+        endDate: sprintRequest.endDate,
+        duration: sprintRequest.duration
+      })
+
       const newSprint = await createSprint(sprintRequest)
       router.push(`/sprints/${newSprint.id}`)
     } catch (error) {
@@ -126,6 +146,39 @@ export default function CreateSprintPage() {
     }))
   }
 
+  // 处理AI生成的计划
+  const handleAIPlanGenerated = (plan: AIGeneratedPlan) => {
+    setAiGeneratedPlan(plan)
+    // 不要立即关闭AI生成器，让用户看到生成的计划
+    // setShowAIGenerator(false)
+
+    // 自动填充表单数据
+    setFormData(prev => ({
+      ...prev,
+      title: plan.title,
+      description: plan.description,
+      // 根据AI计划的总时长推断模板
+      template: plan.totalEstimatedHours <= 40 ? '7days' :
+                plan.totalEstimatedHours <= 80 ? '14days' : '30days'
+    }))
+
+    // 根据AI计划推断模板
+    const estimatedDays = Math.ceil(plan.totalEstimatedHours / plan.dailyHoursRecommendation)
+    if (estimatedDays <= 7) {
+      setSelectedTemplate('7days')
+    } else if (estimatedDays <= 14) {
+      setSelectedTemplate('14days')
+    } else {
+      setSelectedTemplate('30days')
+    }
+  }
+
+  // 处理使用AI计划
+  const handleUseAIPlan = () => {
+    setShowAIGenerator(false)
+    // 表单数据已经在handleAIPlanGenerated中填充了
+  }
+
   const getDifficultyColor = (difficulty: SprintDifficulty) => {
     const colors = {
       beginner: 'success',
@@ -146,27 +199,87 @@ export default function CreateSprintPage() {
         <Navigation />
         <div className="max-w-4xl mx-auto p-6">
           {/* 页面头部 */}
-          <div className="flex items-center gap-4 mb-8">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={() => router.back()}
-            >
-              <ArrowLeftIcon className="h-4 w-4 mr-2" />
-              返回
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">创建冲刺计划</h1>
-              <p className="text-muted-foreground mt-1">
-                制定您的短期目标，开始高效冲刺
-              </p>
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.back()}
+              >
+                <ArrowLeftIcon className="h-4 w-4 mr-2" />
+                返回
+              </Button>
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">创建冲刺计划</h1>
+                <p className="text-muted-foreground mt-1">
+                  制定您的短期目标，开始高效冲刺
+                </p>
+              </div>
             </div>
+
+            {/* AI生成按钮 */}
+            <Button
+              variant="outline"
+              onClick={() => setShowAIGenerator(true)}
+              className="flex items-center space-x-2"
+            >
+              <SparklesIcon className="h-4 w-4" />
+              <span>AI生成计划</span>
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* 左侧：基本信息 */}
               <div className="lg:col-span-2 space-y-6">
+                {/* AI生成计划预览 */}
+                {aiGeneratedPlan && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardHeader>
+                      <CardTitle className="flex items-center space-x-2">
+                        <SparklesIcon className="h-5 w-5 text-primary" />
+                        <span>AI生成的计划</span>
+                        <Badge variant="outline">已应用</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="text-sm">
+                        <p className="font-medium">{aiGeneratedPlan.title}</p>
+                        <p className="text-muted-foreground mt-1">{aiGeneratedPlan.description}</p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-3 text-xs">
+                        <span className="bg-background px-2 py-1 rounded">
+                          📋 {aiGeneratedPlan.tasks.length} 个任务
+                        </span>
+                        <span className="bg-background px-2 py-1 rounded">
+                          ⏱️ {aiGeneratedPlan.totalEstimatedHours} 小时
+                        </span>
+                        <span className="bg-background px-2 py-1 rounded">
+                          📅 每日 {aiGeneratedPlan.dailyHoursRecommendation} 小时
+                        </span>
+                      </div>
+
+                      <div className="flex space-x-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowAIGenerator(true)}
+                        >
+                          重新生成
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setAiGeneratedPlan(null)}
+                        >
+                          移除
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* 基本信息 */}
                 <Card>
                   <CardHeader>
@@ -409,6 +522,19 @@ export default function CreateSprintPage() {
             </div>
           </form>
         </div>
+
+        {/* AI生成器模态框 */}
+        {showAIGenerator && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-background rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <AIPlanGenerator
+                onPlanGenerated={handleAIPlanGenerated}
+                onClose={() => setShowAIGenerator(false)}
+                onUsePlan={handleUseAIPlan}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </PermissionGuard>
   )

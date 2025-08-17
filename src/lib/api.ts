@@ -185,8 +185,25 @@ class ApiClient {
   }
 }
 
+// 获取API基础URL
+const getApiBaseUrl = () => {
+  // 如果有环境变量配置的API URL，使用它
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL
+  }
+
+  // 否则使用Firebase Functions的URL
+  // 在生产环境中，这应该是你的Firebase Functions的URL
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://asia-east1-n8n-project-460516.cloudfunctions.net'
+  }
+
+  // 开发环境临时使用生产API（因为模拟器端口被占用）
+  return 'https://asia-east1-n8n-project-460516.cloudfunctions.net'
+}
+
 // 创建默认API客户端实例
-export const apiClient = new ApiClient()
+export const apiClient = new ApiClient(getApiBaseUrl())
 
 /**
  * 处理API错误的工具函数

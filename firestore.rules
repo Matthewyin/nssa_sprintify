@@ -115,8 +115,8 @@ service cloud.firestore {
     }
     
     // 时间验证函数
-    function isValidTimestamp(timestamp) {
-      return timestamp is timestamp;
+    function isValidTimestamp(ts) {
+      return ts is timestamp;
     }
     
     // 字符串长度验证

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button, Card, CardHeader, CardTitle, CardContent, Input, Badge } from "@/components/ui"
 import { useAuthStore } from "@/stores"
 import { isValidEmail, isValidPassword } from "@/lib/validations"
+import { loginAnonymously } from "@/lib/firebase-auth"
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
 export default function AuthPage() {
@@ -93,6 +94,47 @@ export default function AuthPage() {
       }
     } catch (error) {
       console.error('认证失败:', error)
+    }
+  }
+
+  const handleAnonymousLogin = async () => {
+    try {
+      console.log('🔥 开始匿名登录测试...')
+
+      // 直接使用Firebase Auth进行匿名登录
+      const { signInAnonymously } = await import('firebase/auth')
+      const { auth } = await import('@/lib/firebase')
+
+      console.log('🔥 导入Firebase模块成功')
+      const userCredential = await signInAnonymously(auth)
+      console.log('✅ 匿名登录成功:', userCredential.user.uid)
+
+      // 获取token并检查长度
+      const token = await userCredential.user.getIdToken()
+      console.log('🔍 Token长度:', token.length)
+      console.log('🔍 Token前50字符:', token.substring(0, 50))
+
+      // 测试API调用
+      console.log('🔥 测试API调用...')
+      const response = await fetch('http://127.0.0.1:5001/n8n-project-460516/asia-east1/api/sprints', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      console.log('API响应状态:', response.status)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('API响应成功:', data)
+      } else {
+        console.log('API响应失败:', await response.text())
+      }
+
+      // 跳转到dashboard
+      router.push('/dashboard')
+    } catch (error) {
+      console.error('❌ 匿名登录失败:', error)
     }
   }
 
@@ -278,13 +320,25 @@ export default function AuthPage() {
               </div>
             )}
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full"
               disabled={isLoading}
             >
               {isLoading ? '处理中...' : (isLogin ? '登录' : '注册')}
             </Button>
+
+            {/* 匿名登录按钮（仅开发环境显示） */}
+            {process.env.NODE_ENV === 'development' && (
+              <Button
+                type="button"
+                onClick={handleAnonymousLogin}
+                className="w-full bg-orange-500 hover:bg-orange-600"
+                disabled={isLoading}
+              >
+                🔥 匿名登录（测试模拟器）
+              </Button>
+            )}
 
             <div className="text-center">
               <button
@@ -317,10 +371,10 @@ export default function AuthPage() {
             <div className="text-center space-y-2">
               <p className="text-sm text-muted-foreground">测试账户信息</p>
               <div className="text-xs space-y-1 bg-muted p-3 rounded-md">
-                <p><strong>邮箱:</strong> test@example.com</p>
-                <p><strong>密码:</strong> password123</p>
+                <p><strong>邮箱:</strong> test@nssa.io</p>
+                <p><strong>密码:</strong> 请使用你在Firebase中设置的密码</p>
                 <p className="text-muted-foreground">
-                  注意：需要先配置Firebase才能正常使用
+                  注意：需要先在Firestore中创建用户文档
                 </p>
               </div>
             </div>

@@ -2,6 +2,10 @@ import { Router } from "express";
 import * as admin from "firebase-admin";
 import { authenticateUser, AuthenticatedRequest, rateLimit } from "../middleware/auth";
 
+// 获取Firestore实例
+const db = admin.firestore();
+const FieldValue = admin.firestore.FieldValue;
+
 const router = Router();
 
 // 应用认证中间件到所有路由
@@ -138,17 +142,24 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
   try {
     const { uid } = req.user!;
     const sprintData = req.body;
-    
+
+    console.log('🔍 后端收到的Sprint数据:', sprintData);
+    console.log('🔍 用户ID:', uid);
+
     // 验证必填字段
     const requiredFields = ["title", "description", "type", "template", "startDate", "endDate"];
     for (const field of requiredFields) {
       if (!sprintData[field]) {
+        console.log(`❌ 缺少必填字段: ${field}, 值为:`, sprintData[field]);
         return res.status(400).json({
           success: false,
-          error: `缺少必填字段: ${field}`
+          error: `缺少必填字段: ${field}`,
+          receivedData: sprintData
         });
       }
     }
+
+    console.log('✅ 所有必填字段验证通过');
     
     // 创建冲刺文档
     const sprintRef = admin.firestore()
@@ -169,8 +180,8 @@ router.post("/", async (req: AuthenticatedRequest, res) => {
         totalTime: 0,
         actualTime: 0
       },
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
     };
     
     await sprintRef.set(newSprint);
@@ -218,7 +229,7 @@ router.put("/:sprintId", async (req: AuthenticatedRequest, res) => {
     // 更新冲刺
     await sprintRef.update({
       ...updates,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      updatedAt: FieldValue.serverTimestamp()
     });
     
     res.json({
@@ -298,8 +309,8 @@ router.post("/:sprintId/start", async (req: AuthenticatedRequest, res) => {
     
     await sprintRef.update({
       status: "active",
-      startDate: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      startDate: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
     });
     
     res.json({
@@ -331,8 +342,8 @@ router.post("/:sprintId/complete", async (req: AuthenticatedRequest, res) => {
     
     await sprintRef.update({
       status: "completed",
-      completedAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      completedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp()
     });
     
     res.json({

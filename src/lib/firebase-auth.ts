@@ -3,6 +3,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInAnonymously,
   signOut,
   onAuthStateChanged,
   updateProfile,
@@ -90,26 +91,51 @@ export async function loginUser(
 
     // 获取用户文档
     const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid))
-    
+
+    let userData: any
+    let user: User
+
     if (!userDoc.exists()) {
-      throw new Error('用户数据不存在')
-    }
+      // 如果用户文档不存在，创建一个新的
+      console.log('用户文档不存在，正在创建...')
 
-    const userData = userDoc.data()
-    const user: User = {
-      id: firebaseUser.uid,
-      email: firebaseUser.email!,
-      displayName: userData.displayName || firebaseUser.displayName || firebaseUser.email!.split('@')[0],
-      userType: userData.userType || 'normal',
-      createdAt: userData.createdAt?.toDate() || new Date(),
-      updatedAt: userData.updatedAt?.toDate() || new Date()
-    }
+      const newUserData = {
+        displayName: firebaseUser.displayName || firebaseUser.email!.split('@')[0],
+        userType: 'normal' as UserType,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        lastLoginAt: serverTimestamp()
+      }
 
-    // 更新最后登录时间
-    await updateDoc(doc(db, 'users', firebaseUser.uid), {
-      lastLoginAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    })
+      // 创建用户文档
+      await setDoc(doc(db, 'users', firebaseUser.uid), newUserData)
+
+      user = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email!,
+        displayName: newUserData.displayName,
+        userType: newUserData.userType,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    } else {
+      // 用户文档存在，使用现有数据
+      userData = userDoc.data()
+      user = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email!,
+        displayName: userData.displayName || firebaseUser.displayName || firebaseUser.email!.split('@')[0],
+        userType: userData.userType || 'normal',
+        createdAt: userData.createdAt?.toDate() || new Date(),
+        updatedAt: userData.updatedAt?.toDate() || new Date()
+      }
+
+      // 更新最后登录时间
+      await updateDoc(doc(db, 'users', firebaseUser.uid), {
+        lastLoginAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      })
+    }
 
     return { user, firebaseUser }
   } catch (error) {
@@ -174,8 +200,9 @@ export async function updateUserProfile(
 export async function getUserData(userId: string): Promise<User | null> {
   try {
     const userDoc = await getDoc(doc(db, 'users', userId))
-    
+
     if (!userDoc.exists()) {
+      console.warn(`用户文档不存在: ${userId}`)
       return null
     }
 
@@ -189,8 +216,9 @@ export async function getUserData(userId: string): Promise<User | null> {
       updatedAt: userData.updatedAt?.toDate() || new Date()
     }
   } catch (error) {
-    console.error('Get user data error:', error)
-    return null
+    console.error('获取用户数据失败:', error)
+    // 重新抛出错误，让调用者处理
+    throw error
   }
 }
 
@@ -249,5 +277,40 @@ export async function checkUserPermission(
   } catch (error) {
     console.error('Permission check error:', error)
     return false
+  }
+}
+
+/**
+ * 匿名登录（用于测试模拟器）
+ */
+export async function loginAnonymously(): Promise<{ user: User; firebaseUser: FirebaseUser }> {
+  try {
+    console.log('🔥 开始匿名登录...')
+    const userCredential: UserCredential = await signInAnonymously(auth)
+    const firebaseUser = userCredential.user
+
+    console.log('✅ 匿名登录成功，用户ID:', firebaseUser.uid)
+
+    // 获取token并检查长度
+    const token = await firebaseUser.getIdToken()
+    console.log('🔍 Token长度:', token.length)
+    console.log('🔍 Token前50字符:', token.substring(0, 50))
+
+    // 创建用户对象
+    const user: User = {
+      uid: firebaseUser.uid,
+      email: firebaseUser.email || `anonymous-${firebaseUser.uid}@example.com`,
+      displayName: firebaseUser.displayName || '匿名用户',
+      userType: 'normal',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isEmailVerified: false
+    }
+
+    console.log('✅ 匿名用户对象创建成功')
+    return { user, firebaseUser }
+  } catch (error) {
+    console.error('❌ 匿名登录失败:', error)
+    throw error
   }
 }

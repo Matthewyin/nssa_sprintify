@@ -6,6 +6,7 @@ import { Navigation } from "@/components/navigation"
 import { PermissionGuard } from "@/components/permission-guard"
 import { useSprintStore } from "@/stores/sprint-store"
 import { useAuthStore } from "@/stores/auth-store"
+import { useAuthInitialized } from "@/hooks/useAuth"
 import { SprintInfo } from "@/types/sprint"
 import { 
   CalendarIcon,
@@ -20,13 +21,15 @@ import {
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
-  const { 
-    sprints, 
+  const {
+    sprints,
     currentSprint,
-    isLoading, 
-    loadSprints 
+    isLoading,
+    loadSprints
   } = useSprintStore()
-  
+
+  const authInitialized = useAuthInitialized()
+
   const [stats, setStats] = useState({
     totalSprints: 0,
     activeSprints: 0,
@@ -37,9 +40,12 @@ export default function DashboardPage() {
     streak: 0
   })
 
+  // 等待Auth初始化完成后再加载数据
   useEffect(() => {
-    loadSprints()
-  }, [loadSprints])
+    if (authInitialized) {
+      loadSprints()
+    }
+  }, [authInitialized, loadSprints])
 
   useEffect(() => {
     if (sprints.length > 0) {

@@ -1,0 +1,67 @@
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 渐变定义 -->
+    <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4ff;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#0099ff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0066cc;stop-opacity:1" />
+    </linearGradient>
+    
+    <linearGradient id="pinkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff44ff;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#ff00cc;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#cc0099;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- 发光效果 -->
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="0.8" result="coloredBlur"/>
+      <feMerge> 
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- 背景圆形 -->
+  <circle cx="16" cy="16" r="15" fill="#1a1a2e" stroke="url(#blueGradient)" stroke-width="1"/>
+  
+  <!-- 主要文字 NS -->
+  <g filter="url(#glow)">
+    <!-- 字母 N -->
+    <path d="M6 8 L6 24 L9 24 L9 14 L15 24 L18 24 L18 8 L15 8 L15 18 L9 8 Z" 
+          fill="url(#blueGradient)" 
+          stroke="#00d4ff" 
+          stroke-width="0.2"/>
+    
+    <!-- 字母 S -->
+    <path d="M20 8 L28 8 L28 11 L23 11 L23 13 L28 13 L28 16 L28 19 L20 19 L20 24 L30 24 L30 21 L25 21 L25 19 L30 19 L30 16 L30 13 L20 13 Z" 
+          fill="url(#blueGradient)" 
+          stroke="#00d4ff" 
+          stroke-width="0.2"/>
+  </g>
+  
+  <!-- 跑步人物剪影 -->
+  <g transform="translate(24, 6)" opacity="0.8" filter="url(#glow)">
+    <!-- 头部 -->
+    <circle cx="0" cy="0" r="1.5" fill="url(#pinkGradient)"/>
+    
+    <!-- 身体 -->
+    <path d="M0 1.5 L0 6" stroke="url(#pinkGradient)" stroke-width="1.2" stroke-linecap="round"/>
+    
+    <!-- 手臂 -->
+    <path d="M0 3 L-2 2" stroke="url(#pinkGradient)" stroke-width="1" stroke-linecap="round"/>
+    <path d="M0 4 L2 3" stroke="url(#pinkGradient)" stroke-width="1" stroke-linecap="round"/>
+    
+    <!-- 腿部 -->
+    <path d="M0 6 L-1 9" stroke="url(#pinkGradient)" stroke-width="1" stroke-linecap="round"/>
+    <path d="M0 6 L2 8" stroke="url(#pinkGradient)" stroke-width="1" stroke-linecap="round"/>
+  </g>
+  
+  <!-- 装饰点 -->
+  <g opacity="0.6">
+    <circle cx="4" cy="12" r="0.5" fill="#00d4ff"/>
+    <circle cx="28" cy="20" r="0.5" fill="#ff44ff"/>
+    <circle cx="6" cy="26" r="0.3" fill="#00d4ff"/>
+  </g>
+</svg>

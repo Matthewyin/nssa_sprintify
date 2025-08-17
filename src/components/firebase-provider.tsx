@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '@/stores'
 import { validateFirebaseConfig, checkFirebaseConnection } from '@/lib/firebase'
+import { AuthWrapper } from '@/components/auth-wrapper'
+import { FirebaseEmulatorInit } from '@/components/firebase-emulator-init'
 
 interface FirebaseProviderProps {
   children: React.ReactNode
@@ -17,19 +19,17 @@ export function FirebaseProvider({ children }: FirebaseProviderProps) {
     const initializeFirebase = async () => {
       try {
         // 验证Firebase配置
-        if (!validateFirebaseConfig()) {
-          console.warn('Firebase配置不完整，使用演示模式')
+        const configValid = validateFirebaseConfig()
+        if (!configValid) {
+          console.warn('Firebase配置不完整，某些功能可能不可用')
+          // 配置无效时仍然继续，但不进行连接检查
+          setIsInitialized(true)
+          return
         }
 
-        // 检查Firebase连接
-        const isConnected = await checkFirebaseConnection()
-        if (!isConnected) {
-          console.warn('Firebase连接失败，某些功能可能不可用')
-        }
-
-        // 初始化认证状态
+        // 初始化认证状态（不进行连接检查以避免不必要的Firestore请求）
         await initialize()
-        
+
         setIsInitialized(true)
       } catch (error) {
         console.error('Firebase初始化失败:', error)
@@ -75,7 +75,14 @@ export function FirebaseProvider({ children }: FirebaseProviderProps) {
     )
   }
 
-  return <>{children}</>
+  return (
+    <>
+      <FirebaseEmulatorInit />
+      <AuthWrapper>
+        {children}
+      </AuthWrapper>
+    </>
+  )
 }
 
 // Firebase状态指示器组件

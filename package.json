@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@headlessui/react": "^2.2.7",
     "@heroicons/react": "^2.2.0",
     "clsx": "^2.1.1",

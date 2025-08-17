@@ -1,22 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { FirebaseProvider } from "@/components/firebase-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
-  title: "短期冲刺管理App",
+  title: "NSSA Sprintify - 短期冲刺管理平台",
   description: "专注于短期目标的快速达成，支持学习冲刺和简单项目管理",
-  keywords: ["冲刺管理", "项目管理", "学习计划", "目标管理", "效率工具"],
+  keywords: ["冲刺管理", "项目管理", "学习计划", "目标管理", "效率工具", "NSSA"],
   authors: [{ name: "NSSA Sprintify Team" }],
   creator: "NSSA Sprintify",
   publisher: "NSSA Sprintify",
@@ -29,23 +25,23 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "冲刺管理",
+    title: "NSSA Sprintify",
   },
   openGraph: {
     type: "website",
-    siteName: "短期冲刺管理App",
-    title: "短期冲刺管理App",
+    siteName: "NSSA Sprintify",
+    title: "NSSA Sprintify - 短期冲刺管理平台",
     description: "专注于短期目标的快速达成，支持学习冲刺和简单项目管理",
     locale: "zh_CN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "短期冲刺管理App",
+    title: "NSSA Sprintify - 短期冲刺管理平台",
     description: "专注于短期目标的快速达成，支持学习冲刺和简单项目管理",
   },
   icons: {
     icon: [
-      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/logo.svg", type: "image/svg+xml" },
       { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
@@ -95,7 +91,7 @@ export default function RootLayout({
         <link rel="apple-touch-startup-image" href="/icons/apple-splash-640-1136.jpg" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} antialiased font-sans`}
       >
         <FirebaseProvider>
           {children}

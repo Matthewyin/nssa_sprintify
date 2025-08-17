@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { 
-  SprintInfo, 
-  Task, 
-  Milestone, 
-  CreateSprintRequest, 
+import { SprintApiService } from '@/lib/sprint-api'
+import {
+  SprintInfo,
+  Task,
+  Milestone,
+  CreateSprintRequest,
   UpdateSprintRequest,
   CreateTaskRequest,
   UpdateTaskRequest,
@@ -41,7 +42,10 @@ interface SprintState {
   
   // 错误信息
   error: string | null
-  
+
+  // 数据管理 Actions
+  clearAllData: () => void
+
   // 冲刺管理 Actions
   setCurrentSprint: (sprint: SprintInfo | null) => void
   createSprint: (request: CreateSprintRequest) => Promise<SprintInfo>
@@ -98,6 +102,23 @@ export const useSprintStore = create<SprintState>()(
       isUpdating: false,
       error: null,
 
+      // 数据管理 Actions
+      clearAllData: () => {
+        set({
+          currentSprint: null,
+          sprints: [],
+          currentTasks: [],
+          currentMilestones: [],
+          stats: null,
+          filters: {},
+          pagination: { page: 1, limit: 10, sortBy: 'updatedAt', sortOrder: 'desc' },
+          isLoading: false,
+          isCreating: false,
+          isUpdating: false,
+          error: null
+        })
+      },
+
       // 冲刺管理 Actions
       setCurrentSprint: (sprint) => {
         set({ currentSprint: sprint })
@@ -106,46 +127,23 @@ export const useSprintStore = create<SprintState>()(
       createSprint: async (request) => {
         set({ isCreating: true, error: null })
         try {
-          // 生成ID
-          const id = `sprint_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-          
-          const newSprint: SprintInfo = {
-            id,
-            userId: 'current_user', // TODO: 从auth store获取
-            title: request.title,
-            description: request.description,
-            type: request.type,
-            template: request.template,
-            difficulty: request.difficulty || 'intermediate',
-            status: 'draft',
-            startDate: request.startDate,
-            endDate: request.endDate || new Date(request.startDate.getTime() + (request.duration || 30) * 24 * 60 * 60 * 1000),
-            duration: request.duration || 30,
-            progress: 0,
-            stats: {
-              totalTasks: 0,
-              completedTasks: 0,
-              totalTime: 0,
-              actualTime: 0,
-              completionRate: 0,
-              totalMilestones: 0,
-              completedMilestones: 0
-            },
-            tags: request.tags || [],
-            category: request.category,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          }
-          
+          // 调用API创建冲刺
+          const newSprint = await SprintApiService.createSprint(request)
+
+          // 添加到本地状态
           set((state) => ({
             sprints: [newSprint, ...state.sprints],
             currentSprint: newSprint,
             isCreating: false
           }))
-          
+
           return newSprint
         } catch (error) {
-          set({ error: '创建冲刺失败', isCreating: false })
+          console.error('Create sprint error:', error)
+          set({
+            error: error instanceof Error ? error.message : '创建冲刺失败',
+            isCreating: false
+          })
           throw error
         }
       },
@@ -153,19 +151,27 @@ export const useSprintStore = create<SprintState>()(
       updateSprint: async (id, updates) => {
         set({ isUpdating: true, error: null })
         try {
+          // 调用API更新冲刺
+          await SprintApiService.updateSprint(id, updates)
+
+          // 更新本地状态
           set((state) => ({
-            sprints: state.sprints.map(sprint => 
-              sprint.id === id 
+            sprints: state.sprints.map(sprint =>
+              sprint.id === id
                 ? { ...sprint, ...updates, updatedAt: new Date() }
                 : sprint
             ),
-            currentSprint: state.currentSprint?.id === id 
+            currentSprint: state.currentSprint?.id === id
               ? { ...state.currentSprint, ...updates, updatedAt: new Date() }
               : state.currentSprint,
             isUpdating: false
           }))
         } catch (error) {
-          set({ error: '更新冲刺失败', isUpdating: false })
+          console.error('Update sprint error:', error)
+          set({
+            error: error instanceof Error ? error.message : '更新冲刺失败',
+            isUpdating: false
+          })
           throw error
         }
       },
@@ -204,14 +210,21 @@ export const useSprintStore = create<SprintState>()(
       loadSprints: async (filters, pagination) => {
         set({ isLoading: true, error: null })
         try {
-          // TODO: 调用API加载冲刺列表
-          set({ 
+          // 调用API获取冲刺列表
+          const sprints = await SprintApiService.getUserSprints(filters, pagination)
+
+          set({
+            sprints,
             isLoading: false,
             filters: filters || get().filters,
             pagination: pagination || get().pagination
           })
         } catch (error) {
-          set({ error: '加载冲刺列表失败', isLoading: false })
+          console.error('Load sprints error:', error)
+          set({
+            error: error instanceof Error ? error.message : '加载冲刺列表失败',
+            isLoading: false
+          })
         }
       },
 

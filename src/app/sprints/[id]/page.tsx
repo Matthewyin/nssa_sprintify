@@ -213,9 +213,12 @@ export default function SprintDetailPage({ params }: SprintDetailPageProps) {
                   继续
                 </Button>
               )}
-              <Button variant="outline">
+              <Button
+                variant="outline"
+                onClick={() => router.push(`/sprints/${sprintId}/edit`)}
+              >
                 <Cog6ToothIcon className="h-4 w-4 mr-2" />
-                设置
+                编辑冲刺
               </Button>
             </div>
           </div>

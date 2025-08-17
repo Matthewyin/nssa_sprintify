@@ -17,7 +17,7 @@ export async function authenticateUser(
   try {
     // 从请求头获取Authorization token
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       res.status(401).json({
         success: false,
@@ -25,15 +25,15 @@ export async function authenticateUser(
       });
       return;
     }
-    
+
     const token = authHeader.split("Bearer ")[1];
     
     // 验证token
     const decodedToken = await admin.auth().verifyIdToken(token);
-    
+
     // 将用户信息添加到请求对象
     req.user = decodedToken;
-    
+
     next();
   } catch (error) {
     console.error("Authentication error:", error);

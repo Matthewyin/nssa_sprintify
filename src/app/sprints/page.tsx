@@ -7,6 +7,7 @@ import { Button, Card, CardHeader, CardTitle, CardContent, Input, Badge, Progres
 import { Navigation } from "@/components/navigation"
 import { PermissionGuard } from "@/components/permission-guard"
 import { useSprintStore } from "@/stores/sprint-store"
+import { useAuthInitialized } from "@/hooks/useAuth"
 import { SprintInfo, SprintStatus, SprintType } from "@/types/sprint"
 import { 
   PlusIcon,
@@ -34,14 +35,18 @@ export default function SprintsPage() {
     completeSprint,
     clearError 
   } = useSprintStore()
-  
+
+  const authInitialized = useAuthInitialized()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<SprintStatus | 'all'>('all')
   const [typeFilter, setTypeFilter] = useState<SprintType | 'all'>('all')
 
+  // 等待Auth初始化完成后再加载数据
   useEffect(() => {
-    loadSprints()
-  }, [loadSprints])
+    if (authInitialized) {
+      loadSprints()
+    }
+  }, [authInitialized, loadSprints])
 
   useEffect(() => {
     if (error) {
@@ -314,11 +319,18 @@ export default function SprintsPage() {
                         </div>
                         
                         <div className="flex items-center justify-between pt-2">
-                          <Link href={`/sprints/${sprint.id}`}>
-                            <Button variant="outline" size="sm">
-                              查看详情
-                            </Button>
-                          </Link>
+                          <div className="flex gap-2">
+                            <Link href={`/sprints/${sprint.id}`}>
+                              <Button variant="outline" size="sm">
+                                查看详情
+                              </Button>
+                            </Link>
+                            <Link href={`/sprints/${sprint.id}/edit`}>
+                              <Button variant="ghost" size="sm">
+                                编辑
+                              </Button>
+                            </Link>
+                          </div>
                           
                           <div className="flex gap-1">
                             {sprint.status === 'draft' && (

@@ -146,21 +146,55 @@ export const useAuthStore = create<AuthState>()(
           // 设置认证状态监听
           onAuthStateChange(async (firebaseUser) => {
             if (firebaseUser) {
-              // 用户已登录，获取用户数据
-              const userData = await getUserData(firebaseUser.uid)
-              if (userData) {
-                set({
-                  user: userData,
-                  isAuthenticated: true,
-                  isLoading: false
-                })
-              } else {
-                // 用户数据不存在，可能需要重新创建
+              try {
+                // 检查是否是匿名用户
+                if (firebaseUser.isAnonymous) {
+                  console.log('🔥 检测到匿名用户，创建临时用户对象')
+                  // 为匿名用户创建临时用户对象
+                  const anonymousUser: User = {
+                    uid: firebaseUser.uid,
+                    email: `anonymous-${firebaseUser.uid}@example.com`,
+                    displayName: '匿名用户',
+                    userType: 'normal',
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    isEmailVerified: false
+                  }
+
+                  set({
+                    user: anonymousUser,
+                    isAuthenticated: true,
+                    isLoading: false,
+                    error: null
+                  })
+                } else {
+                  // 普通用户，获取用户数据
+                  const userData = await getUserData(firebaseUser.uid)
+                  if (userData) {
+                    set({
+                      user: userData,
+                      isAuthenticated: true,
+                      isLoading: false,
+                      error: null
+                    })
+                  } else {
+                    // 用户数据不存在，可能需要重新创建
+                    set({
+                      user: null,
+                      isAuthenticated: false,
+                      isLoading: false,
+                      error: '用户数据不存在'
+                    })
+                  }
+                }
+              } catch (error) {
+                console.error('获取用户数据失败:', error)
+                // 如果获取用户数据失败，仍然保持登录状态但显示错误
                 set({
                   user: null,
                   isAuthenticated: false,
                   isLoading: false,
-                  error: '用户数据不存在'
+                  error: '获取用户数据失败'
                 })
               }
             } else {
@@ -168,14 +202,24 @@ export const useAuthStore = create<AuthState>()(
               set({
                 user: null,
                 isAuthenticated: false,
-                isLoading: false
+                isLoading: false,
+                error: null
               })
             }
           })
+
+          // 初始化完成，如果没有用户则停止加载
+          const currentUser = getCurrentUser()
+          if (!currentUser) {
+            set({ isLoading: false })
+          }
         } catch (error) {
+          console.error('认证初始化失败:', error)
           set({
             error: error instanceof Error ? error.message : '初始化失败',
-            isLoading: false
+            isLoading: false,
+            user: null,
+            isAuthenticated: false
           })
         }
       }

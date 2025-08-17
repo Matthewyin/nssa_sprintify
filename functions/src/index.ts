@@ -1,7 +1,15 @@
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
-import * as cors from "cors";
-import * as express from "express";
+import cors from "cors";
+import express from "express";
+
+// 在开发环境中连接到模拟器 - 必须在初始化之前设置
+if (process.env.FUNCTIONS_EMULATOR === 'true') {
+  // 设置环境变量以使用Auth模拟器
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
+  process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
+  console.log('Firebase Admin SDK configured for emulator environment');
+}
 
 // 初始化Firebase Admin SDK
 admin.initializeApp();
@@ -39,7 +47,7 @@ app.use("/stats", statsRoutes);
 app.use("/notifications", notificationRoutes);
 
 // 健康检查端点
-app.get("/health", (req, res) => {
+app.get("/health", (req: express.Request, res: express.Response) => {
   res.status(200).json({
     status: "healthy",
     timestamp: new Date().toISOString(),
@@ -55,9 +63,9 @@ export const dailyTasks = scheduledTasks.dailyTasks;
 export const hourlyTasks = scheduledTasks.hourlyTasks;
 
 // 导出触发器函数
-export { userTriggers } from "./triggers/user";
-export { sprintTriggers } from "./triggers/sprint";
-export { taskTriggers } from "./triggers/task";
+// export { userTriggers } from "./triggers/user";
+// export { sprintTriggers } from "./triggers/sprint";
+// export { taskTriggers } from "./triggers/task";
 
 // 导出实用工具函数
-export { utilityFunctions } from "./utils/functions";
+// export { utilityFunctions } from "./utils/functions";
