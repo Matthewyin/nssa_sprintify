@@ -6,6 +6,8 @@ import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Prog
 import { Navigation } from "@/components/navigation"
 import { useAuthStore } from "@/stores/auth-store"
 import { useAuthInitialized } from "@/hooks/useAuth"
+import { useAnalytics } from "@/hooks/use-analytics"
+import { trackUserAction } from "@/utils/analytics"
 import {
   RocketLaunchIcon,
   ChartBarIcon,
@@ -40,6 +42,9 @@ export default function Home() {
     successRate: 0
   })
   const [statsLoading, setStatsLoading] = useState(true)
+
+  // 页面浏览跟踪
+  useAnalytics()
 
   // 获取统计数据
   useEffect(() => {
@@ -111,7 +116,11 @@ export default function Home() {
                   </Link>
                 ) : (
                   <Link href="/test-auth">
-                    <Button size="lg" className="w-full sm:w-auto">
+                    <Button
+                      size="lg"
+                      className="w-full sm:w-auto"
+                      onClick={() => trackUserAction.clickCTA('免费开始冲刺', 'hero_section')}
+                    >
                       <PlayIcon className="h-5 w-5 mr-2" />
                       免费开始冲刺
                     </Button>
@@ -409,20 +418,33 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {authInitialized && isAuthenticated ? (
                 <Link href="/sprints/create">
-                  <Button size="lg" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto"
+                    onClick={() => trackUserAction.clickCTA('创建我的第一个冲刺', 'bottom_cta')}
+                  >
                     <RocketLaunchIcon className="h-5 w-5 mr-2" />
                     创建我的第一个冲刺
                   </Button>
                 </Link>
               ) : (
                 <Link href="/test-auth">
-                  <Button size="lg" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    className="w-full sm:w-auto"
+                    onClick={() => trackUserAction.clickCTA('免费注册开始', 'bottom_cta')}
+                  >
                     <PlayIcon className="h-5 w-5 mr-2" />
                     免费注册开始
                   </Button>
                 </Link>
               )}
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto"
+                onClick={() => trackUserAction.clickCTA('了解更多功能', 'bottom_cta')}
+              >
                 了解更多功能
                 <ArrowRightIcon className="h-4 w-4 ml-2" />
               </Button>

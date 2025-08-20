@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Button, Card, CardHeader, CardTitle, CardContent, Input, Badge } from "@/components/ui"
 import { useAuthStore } from "@/stores"
 import { isValidEmail, isValidPassword } from "@/lib/validations"
+import { useAnalytics } from "@/hooks/use-analytics"
+import { trackUserAction } from "@/utils/analytics"
 
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
@@ -21,6 +23,9 @@ export default function AuthPage() {
   const [formErrors, setFormErrors] = useState<Record<string, string[]>>({})
 
   const { login, register, isLoading, error, user, isAuthenticated, logout, clearError } = useAuthStore()
+
+  // 页面浏览跟踪
+  useAnalytics()
 
   // 如果已登录，重定向到首页
   useEffect(() => {
@@ -85,15 +90,24 @@ export default function AuthPage() {
           email: formData.email,
           password: formData.password
         })
+        // 跟踪登录事件
+        trackUserAction.login('email')
       } else {
         await register({
           email: formData.email,
           password: formData.password,
           confirmPassword: formData.confirmPassword
         })
+        // 跟踪注册事件
+        trackUserAction.signup('email')
       }
     } catch (error) {
       console.error('认证失败:', error)
+      // 跟踪错误事件
+      trackUserAction.error(
+        isLogin ? 'login_error' : 'signup_error',
+        error instanceof Error ? error.message : 'Unknown error'
+      )
     }
   }
 
