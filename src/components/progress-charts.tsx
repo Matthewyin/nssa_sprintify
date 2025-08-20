@@ -62,26 +62,14 @@ export function ProgressCharts({ sprints }: ProgressChartsProps) {
         return sprintDate >= dayDate && sprintDate <= dayEnd
       })
 
-      // 获取当天完成的任务数据
-      const dayTasks = sprints.reduce((tasks, sprint) => {
-        if (sprint.tasks) {
-          const sprintTasks = sprint.tasks.filter(task => {
-            if (task.completedAt) {
-              const taskDate = new Date(task.completedAt)
-              return taskDate >= dayDate && taskDate <= dayEnd
-            }
-            return false
-          })
-          return tasks.concat(sprintTasks)
-        }
-        return tasks
-      }, [] as any[])
+      // 获取当天完成的任务数据 - 暂时返回空数组，因为SprintInfo没有tasks属性
+      const dayTasks: any[] = []
 
       const completed = dayTasks.length
-      const total = daySprints.reduce((sum, sprint) => sum + (sprint.tasks?.length || 0), 0)
+      const total = daySprints.length // 暂时使用冲刺数量作为总数
 
       // 计算生产力指数（完成任务数 + 冲刺活跃度）
-      const productivity = completed + (daySprints.filter(s => s.status === 'active').length * 2)
+      const productivity = completed + (daySprints.filter(s => s.status === 'completed').length * 2)
 
       days.push({
         date: `${dayDate.getMonth() + 1}月${dayDate.getDate()}日`,

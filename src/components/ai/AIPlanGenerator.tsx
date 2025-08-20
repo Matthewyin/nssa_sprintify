@@ -154,7 +154,7 @@ export default function AIPlanGenerator({ onPlanGenerated, onClose, onUsePlan }:
                     </div>
                     <div className="flex flex-col items-end space-y-1 ml-4">
                       <Badge variant={
-                        task.priority === 'high' ? 'destructive' :
+                        task.priority === 'high' ? 'outline' :
                         task.priority === 'medium' ? 'default' : 'secondary'
                       }>
                         {task.priority === 'high' ? '高' : task.priority === 'medium' ? '中' : '低'}

@@ -117,7 +117,7 @@ export class UserApiService {
       }>('/users', queryParams, { headers })
 
       if (!response.success || !response.data?.success) {
-        throw new Error(response.error || response.data?.error || '获取用户列表失败')
+        throw new Error('获取用户列表失败')
       }
 
       return response.data.data
@@ -140,7 +140,7 @@ export class UserApiService {
       }>(`/users/${userId}`, undefined, { headers })
 
       if (!response.success || !response.data?.success) {
-        throw new Error(response.error || response.data?.error || '获取用户信息失败')
+        throw new Error('获取用户信息失败')
       }
 
       return response.data.data

@@ -73,7 +73,7 @@ export default function AIUsageDisplay({
         <div className="flex items-center space-x-2">
           {getStatusIcon()}
           <span className="text-sm font-medium">AI使用情况</span>
-          <Badge variant={statusColor === 'green' ? 'default' : 'destructive'}>
+          <Badge variant={statusColor === 'green' ? 'default' : 'outline'}>
             {statusText}
           </Badge>
         </div>
@@ -94,7 +94,7 @@ export default function AIUsageDisplay({
         <CardTitle className="flex items-center space-x-2">
           <SparklesIcon className="h-5 w-5 text-primary" />
           <span>AI使用情况</span>
-          <Badge variant={statusColor === 'green' ? 'default' : 'destructive'}>
+          <Badge variant={statusColor === 'green' ? 'default' : 'outline'}>
             {statusText}
           </Badge>
         </CardTitle>

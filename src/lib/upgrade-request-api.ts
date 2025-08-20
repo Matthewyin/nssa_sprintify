@@ -87,7 +87,7 @@ export class UpgradeRequestApiService {
       }>('/upgrade-requests', queryParams, { headers })
 
       if (!response.success || !response.data?.success) {
-        throw new Error(response.error || response.data?.error || '获取升级申请列表失败')
+        throw new Error('获取升级申请列表失败')
       }
 
       return response.data.data
@@ -110,7 +110,7 @@ export class UpgradeRequestApiService {
       }>('/upgrade-requests', data, { headers })
 
       if (!response.success || !response.data?.success) {
-        throw new Error(response.error || response.data?.error || '创建升级申请失败')
+        throw new Error('创建升级申请失败')
       }
 
       return response.data.data

@@ -105,7 +105,7 @@ export class SprintApiService {
       if (response.success && response.data?.success) {
         return response.data.data || []
       } else {
-        throw new Error(response.error || response.data?.error || '获取冲刺列表失败')
+        throw new Error('获取冲刺列表失败')
       }
     } catch (error) {
       console.error('Get user sprints error:', error)
@@ -128,7 +128,7 @@ export class SprintApiService {
       if (response.success && response.data?.success) {
         return response.data.data || null
       } else {
-        throw new Error(response.error || response.data?.error || '获取冲刺详情失败')
+        throw new Error('获取冲刺详情失败')
       }
     } catch (error) {
       console.error('Get sprint error:', error)
@@ -151,7 +151,7 @@ export class SprintApiService {
       if (response.success && response.data?.success) {
         return response.data.data
       } else {
-        throw new Error(response.error || response.data?.error || '创建冲刺失败')
+        throw new Error('创建冲刺失败')
       }
     } catch (error) {
       console.error('Create sprint error:', error)
@@ -180,26 +180,7 @@ export class SprintApiService {
     }
   }
 
-  /**
-   * 删除冲刺
-   */
-  static async deleteSprint(sprintId: string): Promise<void> {
-    try {
-      const headers = await getAuthHeaders()
-      
-      const response = await apiClient.delete<{
-        success: boolean
-        message?: string
-      }>(API_ENDPOINTS.SPRINTS.DELETE(sprintId), { headers })
-      
-      if (!response.success || !response.data?.success) {
-        throw new Error(response.error || response.data?.message || '删除冲刺失败')
-      }
-    } catch (error) {
-      console.error('Delete sprint error:', error)
-      throw error
-    }
-  }
+
 
   /**
    * 启动冲刺

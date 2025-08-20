@@ -194,15 +194,15 @@ export default function CreateSprintPage() {
       description: plan.description,
       // 根据AI计划的总时长推断模板
       template: plan.totalEstimatedHours <= 40 ? '7days' :
-                plan.totalEstimatedHours <= 80 ? '14days' : '30days'
+                plan.totalEstimatedHours <= 80 ? '21days' : '30days'
     }))
 
     // 根据AI计划推断模板
     const estimatedDays = Math.ceil(plan.totalEstimatedHours / plan.dailyHoursRecommendation)
     if (estimatedDays <= 7) {
       setSelectedTemplate('7days')
-    } else if (estimatedDays <= 14) {
-      setSelectedTemplate('14days')
+    } else if (estimatedDays <= 21) {
+      setSelectedTemplate('21days')
     } else {
       setSelectedTemplate('30days')
     }

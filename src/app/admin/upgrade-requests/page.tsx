@@ -131,7 +131,7 @@ export default function UpgradeRequestsPage() {
       case 'approved':
         return 'success'
       case 'rejected':
-        return 'destructive'
+        return 'outline'
       default:
         return 'secondary'
     }

@@ -460,7 +460,7 @@ export default function UserManagementPage() {
                               </Badge>
                             </td>
                             <td className="py-3 px-2">
-                              <Badge variant={user.disabled ? 'destructive' : 'success'}>
+                              <Badge variant={user.disabled ? 'outline' : 'success'}>
                                 {user.disabled ? '已禁用' : '正常'}
                               </Badge>
                             </td>
@@ -603,7 +603,7 @@ export default function UserManagementPage() {
                                 <Badge
                                   variant={
                                     request.status === 'pending' ? 'warning' :
-                                    request.status === 'approved' ? 'success' : 'destructive'
+                                    request.status === 'approved' ? 'success' : 'outline'
                                   }
                                 >
                                   {request.status === 'pending' ? '待审核' :

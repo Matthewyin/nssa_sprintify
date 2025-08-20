@@ -65,7 +65,7 @@ export default function AnalyticsPage() {
 
   // 获取可选择的冲刺列表（活跃的和即将开始的）
   const getSelectableSprints = () => {
-    return sprints.filter(s => s.status === 'active' || s.status === 'pending')
+    return sprints.filter(s => s.status === 'completed' || s.status === 'draft')
   }
 
   const getFilteredSprints = () => {

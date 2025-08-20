@@ -14,7 +14,7 @@ import {
 } from '@heroicons/react/24/outline'
 
 export default function SetupAdminPage() {
-  const { user, refreshUser } = useAuthStore()
+  const { user } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -71,8 +71,6 @@ export default function SetupAdminPage() {
 
       if (response.success) {
         setMessage('恭喜！您已成为系统的第一个管理员。')
-        // 刷新用户信息
-        await refreshUser()
         // 重新检查管理员状态
         await checkAdminExists()
       } else {
@@ -215,7 +213,7 @@ export default function SetupAdminPage() {
 
                 <Button 
                   onClick={handleSetupAdmin}
-                  disabled={loading || hasAdmin === true}
+                  disabled={loading || hasAdmin !== false}
                   className="w-full"
                 >
                   {loading ? '设置中...' : '成为系统管理员'}

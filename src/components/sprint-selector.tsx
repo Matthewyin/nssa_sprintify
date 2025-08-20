@@ -21,11 +21,12 @@ export function SprintSelector({
 
   // 按优先级排序冲刺：active > paused > draft > completed
   const sortedSprints = [...sprints].sort((a, b) => {
-    const statusPriority = {
+    const statusPriority: Record<string, number> = {
       'active': 1,
-      'paused': 2, 
+      'paused': 2,
       'draft': 3,
-      'completed': 4
+      'completed': 4,
+      'cancelled': 5
     }
     
     const aPriority = statusPriority[a.status] || 5

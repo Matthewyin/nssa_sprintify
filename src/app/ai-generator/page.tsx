@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardHeader, CardTitle, CardContent, Button } from "@/components/ui"
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge } from "@/components/ui"
 import { useAuthStore } from "@/stores"
 import AIPlanGenerator from "@/components/ai/AIPlanGenerator"
 import AIUsageDisplay from "@/components/ai/AIUsageDisplay"

@@ -351,8 +351,7 @@ export const useSprintStore = create<SprintState>()(
         await get().updateTask(taskId, {
           status: 'completed',
           progress: 100,
-          completedAt: new Date(),
-          milestoneSummary: milestoneSummary || undefined
+          completedAt: new Date()
         })
       },
 

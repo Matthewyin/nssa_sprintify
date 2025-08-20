@@ -132,9 +132,10 @@ export default function EditSprintPage() {
     const map = {
       beginner: '初级',
       intermediate: '中级',
-      advanced: '高级'
+      advanced: '高级',
+      expert: '专家'
     }
-    return map[difficulty]
+    return map[difficulty] || '未知'
   }
 
   // 处理AI生成的计划
@@ -264,7 +265,6 @@ export default function EditSprintPage() {
                 <AIPlanGenerator
                   onPlanGenerated={handleAIPlanGenerated}
                   onClose={() => setShowAIGenerator(false)}
-                  initialGoal={formData.title}
                 />
               )}
 
