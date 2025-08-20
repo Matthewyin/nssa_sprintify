@@ -8,7 +8,9 @@ import { Navigation } from "@/components/navigation"
 import { PermissionGuard } from "@/components/permission-guard"
 import { useSprintStore } from "@/stores/sprint-store"
 import { SprintTemplate, SprintDifficulty, SprintType, UpdateSprintRequest } from "@/types/sprint"
-import { getSprintTemplates } from "@/lib/sprint-templates"
+import { SPRINT_TEMPLATES, getTemplateInfo } from "@/lib/sprint-templates"
+import AIPlanGenerator from "@/components/ai/AIPlanGenerator"
+import type { AIGeneratedPlan } from "@/lib/ai-plan-generator"
 import {
   CalendarIcon,
   ClockIcon,
@@ -16,7 +18,8 @@ import {
   BriefcaseIcon,
   StarIcon,
   ArrowLeftIcon,
-  CheckIcon
+  CheckIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
 
 export default function EditSprintPage() {
@@ -42,6 +45,8 @@ export default function EditSprintPage() {
 
   const [formErrors, setFormErrors] = useState<Record<string, string[]>>({})
   const [selectedTemplate, setSelectedTemplate] = useState<SprintTemplate>('30days')
+  const [showAIGenerator, setShowAIGenerator] = useState(false)
+  const [aiGeneratedPlan, setAiGeneratedPlan] = useState<AIGeneratedPlan | null>(null)
 
   // 获取当前冲刺数据
   const sprint = currentSprint?.id === sprintId ? currentSprint : sprints.find(s => s.id === sprintId)
@@ -67,7 +72,7 @@ export default function EditSprintPage() {
     }
   }, [error, clearError])
 
-  const templates = getSprintTemplates()
+  const templates = Object.values(SPRINT_TEMPLATES)
   const recommendations = templates.find(t => t.id === selectedTemplate)
 
   const validateForm = (): boolean => {
@@ -126,10 +131,25 @@ export default function EditSprintPage() {
   const getDifficultyText = (difficulty: SprintDifficulty) => {
     const map = {
       beginner: '初级',
-      intermediate: '中级', 
+      intermediate: '中级',
       advanced: '高级'
     }
     return map[difficulty]
+  }
+
+  // 处理AI生成的计划
+  const handleAIPlanGenerated = (plan: AIGeneratedPlan) => {
+    setAiGeneratedPlan(plan)
+
+    // 自动填充表单数据
+    setFormData(prev => ({
+      ...prev,
+      title: plan.title,
+      description: plan.description
+    }))
+
+    // 可以选择是否自动关闭AI生成器
+    // setShowAIGenerator(false)
   }
 
   if (!sprint) {
@@ -191,10 +211,80 @@ export default function EditSprintPage() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-8">
+              {/* AI生成计划预览 */}
+              {aiGeneratedPlan && (
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <SparklesIcon className="h-5 w-5 text-primary" />
+                      <span>AI生成的计划</span>
+                      <Badge variant="outline">已应用</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="text-sm">
+                      <p className="font-medium">{aiGeneratedPlan.title}</p>
+                      <p className="text-muted-foreground mt-1">{aiGeneratedPlan.description}</p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 text-xs">
+                      <span className="bg-background px-2 py-1 rounded">
+                        📋 {aiGeneratedPlan.tasks.length} 个任务
+                      </span>
+                      <span className="bg-background px-2 py-1 rounded">
+                        ⏱️ {aiGeneratedPlan.totalEstimatedHours} 小时
+                      </span>
+                      <span className="bg-background px-2 py-1 rounded">
+                        📅 每日 {aiGeneratedPlan.dailyHoursRecommendation} 小时
+                      </span>
+                    </div>
+
+                    <div className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowAIGenerator(true)}
+                      >
+                        重新生成
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setAiGeneratedPlan(null)}
+                      >
+                        移除
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* AI生成器 */}
+              {showAIGenerator && (
+                <AIPlanGenerator
+                  onPlanGenerated={handleAIPlanGenerated}
+                  onClose={() => setShowAIGenerator(false)}
+                  initialGoal={formData.title}
+                />
+              )}
+
               {/* 基本信息 */}
               <Card>
                 <CardHeader>
-                  <CardTitle>基本信息</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>基本信息</CardTitle>
+                    {!aiGeneratedPlan && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAIGenerator(true)}
+                      >
+                        <SparklesIcon className="h-4 w-4 mr-2" />
+                        AI生成计划
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-2">

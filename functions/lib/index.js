@@ -43,9 +43,9 @@ const cors_1 = __importDefault(require("cors"));
 const express_1 = __importDefault(require("express"));
 // 在开发环境中连接到模拟器 - 必须在初始化之前设置
 if (process.env.FUNCTIONS_EMULATOR === 'true') {
-    // 设置环境变量以使用Auth模拟器
-    process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
-    process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
+    // 设置环境变量以使用Auth模拟器（使用新的端口配置）
+    process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9098';
+    process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8081';
     console.log('Firebase Admin SDK configured for emulator environment');
 }
 // 初始化Firebase Admin SDK
@@ -69,6 +69,8 @@ const sprints_1 = require("./routes/sprints");
 const ai_1 = require("./routes/ai");
 const stats_1 = require("./routes/stats");
 const notifications_1 = require("./routes/notifications");
+const users_1 = require("./routes/users");
+const upgrade_requests_1 = require("./routes/upgrade-requests");
 // 导入定时任务
 const tasks_1 = require("./scheduled/tasks");
 // 注册路由
@@ -77,6 +79,8 @@ app.use("/sprints", sprints_1.sprintRoutes);
 app.use("/ai", ai_1.aiRoutes);
 app.use("/stats", stats_1.statsRoutes);
 app.use("/notifications", notifications_1.notificationRoutes);
+app.use("/users", users_1.userRoutes);
+app.use("/upgrade-requests", upgrade_requests_1.upgradeRequestRoutes);
 // 健康检查端点
 app.get("/health", (req, res) => {
     res.status(200).json({

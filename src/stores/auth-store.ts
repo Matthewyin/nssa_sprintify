@@ -147,45 +147,23 @@ export const useAuthStore = create<AuthState>()(
           onAuthStateChange(async (firebaseUser) => {
             if (firebaseUser) {
               try {
-                // 检查是否是匿名用户
-                if (firebaseUser.isAnonymous) {
-                  console.log('🔥 检测到匿名用户，创建临时用户对象')
-                  // 为匿名用户创建临时用户对象
-                  const anonymousUser: User = {
-                    uid: firebaseUser.uid,
-                    email: `anonymous-${firebaseUser.uid}@example.com`,
-                    displayName: '匿名用户',
-                    userType: 'normal',
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                    isEmailVerified: false
-                  }
-
+                // 获取用户数据
+                const userData = await getUserData(firebaseUser.uid)
+                if (userData) {
                   set({
-                    user: anonymousUser,
+                    user: userData,
                     isAuthenticated: true,
                     isLoading: false,
                     error: null
                   })
                 } else {
-                  // 普通用户，获取用户数据
-                  const userData = await getUserData(firebaseUser.uid)
-                  if (userData) {
-                    set({
-                      user: userData,
-                      isAuthenticated: true,
-                      isLoading: false,
-                      error: null
-                    })
-                  } else {
-                    // 用户数据不存在，可能需要重新创建
-                    set({
-                      user: null,
-                      isAuthenticated: false,
-                      isLoading: false,
-                      error: '用户数据不存在'
-                    })
-                  }
+                  // 用户数据不存在，可能需要重新创建
+                  set({
+                    user: null,
+                    isAuthenticated: false,
+                    isLoading: false,
+                    error: '用户数据不存在'
+                  })
                 }
               } catch (error) {
                 console.error('获取用户数据失败:', error)

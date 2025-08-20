@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { signInAnonymously, signOut } from 'firebase/auth'
+import { signOut } from 'firebase/auth'
 import { auth } from '@/lib/firebase'
 
 export default function DebugPage() {
@@ -14,46 +14,7 @@ export default function DebugPage() {
     console.log(message)
   }
 
-  const testAnonymousLogin = async () => {
-    try {
-      addLog('🔥 开始匿名登录测试...')
-      const result = await signInAnonymously(auth)
-      setUser(result.user)
-      addLog(`✅ 匿名登录成功: ${result.user.uid}`)
-      
-      const token = await result.user.getIdToken()
-      addLog(`🔍 Token长度: ${token.length}`)
-      addLog(`🔍 Token前50字符: ${token.substring(0, 50)}...`)
-      
-      // 判断是否为模拟器token
-      if (token.length < 500) {
-        addLog('✅ 检测到模拟器Token（长度 < 500）')
-      } else {
-        addLog('❌ 检测到生产环境Token（长度 > 500）')
-      }
-      
-      // 测试API调用
-      addLog('🔥 测试API调用...')
-      const response = await fetch('http://127.0.0.1:5001/n8n-project-460516/asia-east1/api/sprints', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      addLog(`API响应状态: ${response.status}`)
-      if (response.ok) {
-        const data = await response.json()
-        addLog(`API响应成功: ${JSON.stringify(data)}`)
-      } else {
-        const errorText = await response.text()
-        addLog(`API响应失败: ${errorText}`)
-      }
-      
-    } catch (error) {
-      addLog(`❌ 测试失败: ${error}`)
-    }
-  }
+
 
   const testLogout = async () => {
     try {
@@ -87,12 +48,7 @@ export default function DebugPage() {
           </div>
           
           <div className="space-y-2">
-            <button 
-              onClick={testAnonymousLogin}
-              className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              🔥 测试匿名登录
-            </button>
+
             
             <button 
               onClick={testLogout}

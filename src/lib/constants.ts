@@ -163,26 +163,26 @@ export const STORAGE_KEYS = {
 // API端点
 export const API_ENDPOINTS = {
   AUTH: {
-    LOGIN: '/api/auth/login',
-    REGISTER: '/api/auth/register',
-    LOGOUT: '/api/auth/logout',
-    REFRESH: '/api/auth/refresh'
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    LOGOUT: '/auth/logout',
+    REFRESH: '/auth/refresh'
   },
   SPRINTS: {
-    LIST: '/api/sprints',
-    CREATE: '/api/sprints',
-    UPDATE: (id: string) => `/api/sprints/${id}`,
-    DELETE: (id: string) => `/api/sprints/${id}`
+    LIST: '/sprints',
+    CREATE: '/sprints',
+    UPDATE: (id: string) => `/sprints/${id}`,
+    DELETE: (id: string) => `/sprints/${id}`
   },
   TASKS: {
-    LIST: (sprintId: string) => `/api/sprints/${sprintId}/tasks`,
-    CREATE: (sprintId: string) => `/api/sprints/${sprintId}/tasks`,
-    UPDATE: (sprintId: string, taskId: string) => `/api/sprints/${sprintId}/tasks/${taskId}`,
-    DELETE: (sprintId: string, taskId: string) => `/api/sprints/${sprintId}/tasks/${taskId}`
+    LIST: (sprintId: string) => `/sprints/${sprintId}/tasks`,
+    CREATE: (sprintId: string) => `/sprints/${sprintId}/tasks`,
+    UPDATE: (sprintId: string, taskId: string) => `/sprints/${sprintId}/tasks/${taskId}`,
+    DELETE: (sprintId: string, taskId: string) => `/sprints/${sprintId}/tasks/${taskId}`
   },
   AI: {
-    GENERATE_PLAN: '/api/ai/generate-plan',
-    CHAT: '/api/ai/chat'
+    GENERATE_PLAN: '/ai/generate-plan',
+    CHAT: '/ai/chat'
   }
 } as const
 

@@ -11,7 +11,7 @@ interface ProgressChartsProps {
 
 export function ProgressCharts({ sprints }: ProgressChartsProps) {
   const [chartData, setChartData] = useState({
-    weeklyProgress: [] as { week: string; completed: number; total: number }[],
+    dailyProgress: [] as { date: string; completed: number; total: number; productivity: number }[],
     categoryBreakdown: [] as { category: string; count: number; percentage: number }[],
     timeDistribution: [] as { period: string; hours: number }[],
     completionTrend: [] as { date: string; rate: number }[]
@@ -24,55 +24,74 @@ export function ProgressCharts({ sprints }: ProgressChartsProps) {
   }, [sprints])
 
   const generateChartData = () => {
-    // 生成周进度数据
-    const weeklyProgress = generateWeeklyProgress()
-    
+    // 生成7天生产力数据
+    const dailyProgress = generateDailyProgress()
+
     // 生成分类统计
     const categoryBreakdown = generateCategoryBreakdown()
-    
+
     // 生成时间分布
     const timeDistribution = generateTimeDistribution()
-    
+
     // 生成完成趋势
     const completionTrend = generateCompletionTrend()
 
     setChartData({
-      weeklyProgress,
+      dailyProgress,
       categoryBreakdown,
       timeDistribution,
       completionTrend
     })
   }
 
-  const generateWeeklyProgress = () => {
-    const weeks = []
+  const generateDailyProgress = () => {
+    const days = []
     const now = new Date()
-    
+
     for (let i = 6; i >= 0; i--) {
-      const weekStart = new Date(now)
-      weekStart.setDate(now.getDate() - (i * 7))
-      weekStart.setHours(0, 0, 0, 0)
-      
-      const weekEnd = new Date(weekStart)
-      weekEnd.setDate(weekStart.getDate() + 6)
-      weekEnd.setHours(23, 59, 59, 999)
-      
-      const weekSprints = sprints.filter(sprint => {
+      const dayDate = new Date(now)
+      dayDate.setDate(now.getDate() - i)
+      dayDate.setHours(0, 0, 0, 0)
+
+      const dayEnd = new Date(dayDate)
+      dayEnd.setHours(23, 59, 59, 999)
+
+      // 获取当天的冲刺数据
+      const daySprints = sprints.filter(sprint => {
         const sprintDate = new Date(sprint.createdAt)
-        return sprintDate >= weekStart && sprintDate <= weekEnd
+        return sprintDate >= dayDate && sprintDate <= dayEnd
       })
-      
-      const completed = weekSprints.filter(s => s.status === 'completed').length
-      const total = weekSprints.length
-      
-      weeks.push({
-        week: `${weekStart.getMonth() + 1}/${weekStart.getDate()}`,
+
+      // 获取当天完成的任务数据
+      const dayTasks = sprints.reduce((tasks, sprint) => {
+        if (sprint.tasks) {
+          const sprintTasks = sprint.tasks.filter(task => {
+            if (task.completedAt) {
+              const taskDate = new Date(task.completedAt)
+              return taskDate >= dayDate && taskDate <= dayEnd
+            }
+            return false
+          })
+          return tasks.concat(sprintTasks)
+        }
+        return tasks
+      }, [] as any[])
+
+      const completed = dayTasks.length
+      const total = daySprints.reduce((sum, sprint) => sum + (sprint.tasks?.length || 0), 0)
+
+      // 计算生产力指数（完成任务数 + 冲刺活跃度）
+      const productivity = completed + (daySprints.filter(s => s.status === 'active').length * 2)
+
+      days.push({
+        date: `${dayDate.getMonth() + 1}月${dayDate.getDate()}日`,
         completed,
-        total
+        total,
+        productivity
       })
     }
-    
-    return weeks
+
+    return days
   }
 
   const generateCategoryBreakdown = () => {
@@ -127,29 +146,61 @@ export function ProgressCharts({ sprints }: ProgressChartsProps) {
 
   return (
     <div className="space-y-6">
-      {/* 周进度图表 */}
+      {/* 7天生产力趋势 */}
       <Card>
         <CardHeader>
-          <CardTitle>周进度统计</CardTitle>
+          <CardTitle>7天生产力趋势</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {chartData.weeklyProgress.map((week, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>{week.week}</span>
-                  <span>{week.completed}/{week.total}</span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div 
-                    className="bg-primary h-2 rounded-full transition-all duration-300"
-                    style={{ 
-                      width: week.total > 0 ? `${(week.completed / week.total) * 100}%` : '0%' 
-                    }}
-                  />
-                </div>
+          <div className="space-y-6">
+            {/* 柱状图 */}
+            <div className="flex items-end justify-between h-32 gap-2">
+              {chartData.dailyProgress.map((day, index) => {
+                const maxProductivity = Math.max(...chartData.dailyProgress.map(d => d.productivity), 1)
+                const heightPx = Math.max(4, (day.productivity / maxProductivity) * 120) // 固定像素高度
+
+                return (
+                  <div key={index} className="flex flex-col items-center flex-1">
+                    <div
+                      className="bg-primary rounded-t w-full flex items-end justify-center"
+                      style={{ height: `${heightPx}px` }}
+                      title={`${day.date}: 完成${day.completed}个任务，生产力指数${day.productivity}`}
+                    >
+                      {day.productivity > 0 && (
+                        <span className="text-xs text-white font-medium mb-1">
+                          {day.productivity}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground mt-2 text-center">
+                      {day.date.replace('月', '/').replace('日', '')}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* 统计信息 */}
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">总完成任务</p>
+                <p className="text-lg font-semibold">
+                  {chartData.dailyProgress.reduce((sum, day) => sum + day.completed, 0)}
+                </p>
               </div>
-            ))}
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">平均生产力</p>
+                <p className="text-lg font-semibold">
+                  {Math.round(chartData.dailyProgress.reduce((sum, day) => sum + day.productivity, 0) / 7)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">最高生产力</p>
+                <p className="text-lg font-semibold">
+                  {Math.max(...chartData.dailyProgress.map(d => d.productivity))}
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

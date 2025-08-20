@@ -77,49 +77,68 @@ router.post("/verify", auth_1.authenticateUser, async (req, res) => {
     }
 });
 /**
- * 更新用户等级
+ * 管理员升级用户等级（仅限管理员操作其他用户）
  */
-router.post("/upgrade", auth_1.authenticateUser, async (req, res) => {
+router.post("/upgrade-user", auth_1.authenticateUser, async (req, res) => {
     try {
         const { uid } = req.user;
-        const { targetType } = req.body;
+        const { targetUserId, targetType } = req.body;
         // 验证目标用户类型
-        if (!["normal", "premium", "admin"].includes(targetType)) {
+        if (!["normal", "premium"].includes(targetType)) {
             return res.status(400).json({
                 success: false,
                 error: "无效的用户类型"
             });
         }
-        // 检查权限（只有管理员可以升级其他用户）
+        // 检查当前用户是否为管理员
         const currentUserDoc = await admin.firestore()
             .collection("users")
             .doc(uid)
             .get();
         const currentUserData = currentUserDoc.data();
-        if ((currentUserData === null || currentUserData === void 0 ? void 0 : currentUserData.userType) !== "admin" && targetType === "admin") {
+        if ((currentUserData === null || currentUserData === void 0 ? void 0 : currentUserData.userType) !== "admin") {
             return res.status(403).json({
                 success: false,
-                error: "权限不足"
+                error: "权限不足，仅管理员可操作"
             });
         }
-        // 更新用户类型
+        // 检查目标用户是否存在
+        const targetUserDoc = await admin.firestore()
+            .collection("users")
+            .doc(targetUserId)
+            .get();
+        if (!targetUserDoc.exists) {
+            return res.status(404).json({
+                success: false,
+                error: "目标用户不存在"
+            });
+        }
+        const targetUserData = targetUserDoc.data();
+        // 防止修改管理员权限
+        if ((targetUserData === null || targetUserData === void 0 ? void 0 : targetUserData.userType) === "admin") {
+            return res.status(400).json({
+                success: false,
+                error: "不能修改管理员权限"
+            });
+        }
+        // 更新目标用户类型
         await admin.firestore()
             .collection("users")
-            .doc(uid)
+            .doc(targetUserId)
             .update({
             userType: targetType,
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         res.json({
             success: true,
-            message: "用户等级更新成功"
+            message: "用户类型更新成功"
         });
     }
     catch (error) {
-        console.error("User upgrade error:", error);
+        console.error("Upgrade user error:", error);
         res.status(500).json({
             success: false,
-            error: "用户等级更新失败"
+            error: "用户升级失败"
         });
     }
 });
@@ -213,6 +232,56 @@ router.delete("/account", auth_1.authenticateUser, async (req, res) => {
         res.status(500).json({
             success: false,
             error: "账户删除失败"
+        });
+    }
+});
+/**
+ * 设置第一个管理员（仅在系统没有管理员时可用）
+ */
+router.post("/setup-first-admin", auth_1.authenticateUser, async (req, res) => {
+    try {
+        const { uid } = req.user;
+        // 检查系统是否已有管理员
+        const adminQuery = await admin.firestore()
+            .collection("users")
+            .where("userType", "==", "admin")
+            .limit(1)
+            .get();
+        if (!adminQuery.empty) {
+            return res.status(400).json({
+                success: false,
+                error: "系统已有管理员，无法重复设置"
+            });
+        }
+        // 检查当前用户是否存在
+        const currentUserDoc = await admin.firestore()
+            .collection("users")
+            .doc(uid)
+            .get();
+        if (!currentUserDoc.exists) {
+            return res.status(404).json({
+                success: false,
+                error: "用户不存在"
+            });
+        }
+        // 将当前用户设置为管理员
+        await admin.firestore()
+            .collection("users")
+            .doc(uid)
+            .update({
+            userType: "admin",
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        res.json({
+            success: true,
+            message: "恭喜！您已成为系统的第一个管理员"
+        });
+    }
+    catch (error) {
+        console.error("Setup first admin error:", error);
+        res.status(500).json({
+            success: false,
+            error: "设置管理员失败"
         });
     }
 });

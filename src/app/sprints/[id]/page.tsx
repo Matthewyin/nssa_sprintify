@@ -6,10 +6,9 @@ import { Button, Card, CardHeader, CardTitle, CardContent, Badge, Progress, Tabs
 import { Navigation } from "@/components/navigation"
 import { PermissionGuard } from "@/components/permission-guard"
 import { TaskManager } from "@/components/task-manager"
-import { MilestoneManager } from "@/components/milestone-manager"
 import { useSprintStore } from "@/stores/sprint-store"
-import { SprintInfo, Task, Milestone } from "@/types/sprint"
-import { 
+import { SprintInfo, Task } from "@/types/sprint"
+import {
   ArrowLeftIcon,
   CalendarIcon,
   ClockIcon,
@@ -20,7 +19,8 @@ import {
   ListBulletIcon,
   FlagIcon,
   ChartBarIcon,
-  Cog6ToothIcon
+  Cog6ToothIcon,
+  BoltIcon
 } from '@heroicons/react/24/outline'
 
 interface SprintDetailPageProps {
@@ -299,18 +299,14 @@ export default function SprintDetailPage({ params }: SprintDetailPageProps) {
 
           {/* 主要内容区域 */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="tasks" className="flex items-center gap-2">
                 <ListBulletIcon className="h-4 w-4" />
                 任务管理
               </TabsTrigger>
               <TabsTrigger value="milestones" className="flex items-center gap-2">
-                <FlagIcon className="h-4 w-4" />
-                里程碑
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="flex items-center gap-2">
-                <ChartBarIcon className="h-4 w-4" />
-                数据分析
+                <CheckIcon className="h-4 w-4" />
+                完成记录
               </TabsTrigger>
               <TabsTrigger value="settings" className="flex items-center gap-2">
                 <Cog6ToothIcon className="h-4 w-4" />
@@ -323,41 +319,73 @@ export default function SprintDetailPage({ params }: SprintDetailPageProps) {
             </TabsContent>
 
             <TabsContent value="milestones" className="mt-6">
-              {sprintId && <MilestoneManager sprintId={sprintId} />}
-            </TabsContent>
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">完成记录</h3>
+                  <p className="text-sm text-muted-foreground">
+                    查看已完成任务的总结和心得体会
+                  </p>
+                </div>
 
-            <TabsContent value="analytics" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>数据分析</CardTitle>
-                </CardHeader>
-                <CardContent>
+                {/* 完成记录列表 */}
+                <div className="space-y-4">
+                  {/* 这里将显示已完成任务的总结记录 */}
                   <div className="text-center py-12">
-                    <ChartBarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">数据分析功能</h3>
-                    <p className="text-muted-foreground">
-                      即将推出详细的数据分析和可视化功能
+                    <CheckIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h4 className="font-medium mb-2">还没有完成记录</h4>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      完成任务时添加总结，记录你的成长历程
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      💡 提示：在任务管理中完成任务时，可以选择添加心得总结
                     </p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </TabsContent>
+
+
 
             <TabsContent value="settings" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>冲刺设置</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <Cog6ToothIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">冲刺设置</h3>
-                    <p className="text-muted-foreground">
-                      即将推出冲刺配置和管理功能
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="space-y-6">
+                {/* 通知提醒设置 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BoltIcon className="h-5 w-5" />
+                      通知提醒设置
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-8">
+                      <BoltIcon className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                      <h4 className="font-medium mb-2">通知提醒功能</h4>
+                      <p className="text-sm text-muted-foreground">
+                        即将推出任务截止提醒、里程碑达成通知等功能
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 第三方工具集成 */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Cog6ToothIcon className="h-5 w-5" />
+                      第三方工具集成
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-8">
+                      <Cog6ToothIcon className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                      <h4 className="font-medium mb-2">工具集成</h4>
+                      <p className="text-sm text-muted-foreground">
+                        即将支持与日历、邮箱、项目管理工具等的集成
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
           </Tabs>
 

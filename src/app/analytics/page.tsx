@@ -29,10 +29,44 @@ export default function AnalyticsPage() {
   
   const [activeTab, setActiveTab] = useState('overview')
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter' | 'year'>('month')
+  const [selectedSprintId, setSelectedSprintId] = useState<string | null>(null)
 
   useEffect(() => {
     loadSprints()
   }, [loadSprints])
+
+  // 页面可见性检测，返回时刷新数据
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 数据分析页面重新可见，刷新数据')
+        loadSprints()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [loadSprints])
+
+  // 获取当前活跃的冲刺
+  const getActiveSprint = () => {
+    return sprints.find(s => s.status === 'active') || null
+  }
+
+  // 获取选中的冲刺（用于倒计时）
+  const getSelectedSprint = () => {
+    if (selectedSprintId) {
+      return sprints.find(s => s.id === selectedSprintId) || null
+    }
+    return getActiveSprint()
+  }
+
+  // 获取可选择的冲刺列表（活跃的和即将开始的）
+  const getSelectableSprints = () => {
+    return sprints.filter(s => s.status === 'active' || s.status === 'pending')
+  }
 
   const getFilteredSprints = () => {
     const now = new Date()
@@ -326,27 +360,60 @@ export default function AnalyticsPage() {
             </TabsContent>
 
             <TabsContent value="countdown" className="mt-6">
-              {currentSprint ? (
-                <div className="max-w-2xl mx-auto">
-                  <CountdownTimer sprint={currentSprint} />
-                </div>
-              ) : (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <ClockIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">没有活跃的冲刺</h3>
-                    <p className="text-muted-foreground mb-4">
-                      创建一个新的冲刺来开始倒计时
-                    </p>
-                    <button 
-                      onClick={() => window.location.href = '/sprints/create'}
-                      className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-                    >
-                      创建冲刺
-                    </button>
-                  </CardContent>
-                </Card>
-              )}
+              <div className="space-y-6">
+                {/* 冲刺选择器 */}
+                {getSelectableSprints().length > 1 && (
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-4">
+                        <span className="text-sm font-medium">选择冲刺:</span>
+                        <div className="flex gap-2">
+                          {getSelectableSprints().map((sprint) => (
+                            <button
+                              key={sprint.id}
+                              onClick={() => setSelectedSprintId(sprint.id)}
+                              className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                                (selectedSprintId === sprint.id) ||
+                                (!selectedSprintId && sprint.status === 'active')
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                              }`}
+                            >
+                              {sprint.title}
+                              <span className="ml-1 text-xs opacity-75">
+                                ({sprint.status === 'active' ? '进行中' : '待开始'})
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* 倒计时显示 */}
+                {getSelectedSprint() ? (
+                  <div className="max-w-2xl mx-auto">
+                    <CountdownTimer sprint={getSelectedSprint()!} />
+                  </div>
+                ) : (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <ClockIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">没有可用的冲刺</h3>
+                      <p className="text-muted-foreground mb-4">
+                        创建一个新的冲刺来开始倒计时
+                      </p>
+                      <button
+                        onClick={() => window.location.href = '/sprints/create'}
+                        className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+                      >
+                        创建冲刺
+                      </button>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             </TabsContent>
           </Tabs>
 

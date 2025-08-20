@@ -1,99 +1,192 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Button, Card, CardHeader, CardTitle, CardContent, Input, Badge } from "@/components/ui"
-import { PermissionGuard, usePermission } from "@/components/permission-guard"
-import { 
-  UsersIcon, 
-  MagnifyingGlassIcon, 
+import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui"
+import { Navigation } from "@/components/navigation"
+import { PermissionGuard } from "@/components/permission-guard"
+import { UserApiService, UserInfo, UserListParams } from "@/lib/user-api"
+import { UpgradeRequestApiService, UpgradeRequest } from "@/lib/upgrade-request-api"
+import {
+  UsersIcon,
+  MagnifyingGlassIcon,
   PencilIcon,
   TrashIcon,
-  ShieldCheckIcon
+  UserPlusIcon,
+  FunnelIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClipboardDocumentListIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline'
 
-interface User {
-  id: string
-  email: string
-  displayName: string
-  userType: 'normal' | 'premium' | 'admin'
-  createdAt: Date
-  lastLoginAt?: Date
-  isActive: boolean
-}
-
 export default function UserManagementPage() {
-  const { isAdmin } = usePermission()
-  const [users, setUsers] = useState<User[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedUserType, setSelectedUserType] = useState<string>('all')
-  const [isLoading, setIsLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('users')
+  const [users, setUsers] = useState<UserInfo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
 
-  useEffect(() => {
-    // 模拟获取用户列表
-    const mockUsers: User[] = [
-      {
-        id: '1',
-        email: 'admin@example.com',
-        displayName: '系统管理员',
-        userType: 'admin',
-        createdAt: new Date('2024-01-01'),
-        lastLoginAt: new Date(),
-        isActive: true
-      },
-      {
-        id: '2',
-        email: 'premium@example.com',
-        displayName: '高级用户',
-        userType: 'premium',
-        createdAt: new Date('2024-01-15'),
-        lastLoginAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-        isActive: true
-      },
-      {
-        id: '3',
-        email: 'user@example.com',
-        displayName: '普通用户',
-        userType: 'normal',
-        createdAt: new Date('2024-02-01'),
-        lastLoginAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-        isActive: true
-      }
-    ]
-
-    setTimeout(() => {
-      setUsers(mockUsers)
-      setIsLoading(false)
-    }, 1000)
-  }, [])
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.displayName.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = selectedUserType === 'all' || user.userType === selectedUserType
-    return matchesSearch && matchesType
+  // 升级申请相关状态
+  const [upgradeRequests, setUpgradeRequests] = useState<UpgradeRequest[]>([])
+  const [upgradeRequestsLoading, setUpgradeRequestsLoading] = useState(false)
+  const [upgradeRequestsStats, setUpgradeRequestsStats] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0
   })
 
+  // 搜索和筛选状态
+  const [searchTerm, setSearchTerm] = useState('')
+  const [userTypeFilter, setUserTypeFilter] = useState<string>('all')
+  const [sortBy, setSortBy] = useState('createdAt')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalUsers, setTotalUsers] = useState(0)
+  const pageSize = 20
+
+  // 统计信息状态
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    normalUsers: 0,
+    premiumUsers: 0,
+    adminUsers: 0,
+    disabledUsers: 0,
+    recentRegistrations: 0
+  })
+
+  // 加载用户列表
+  const loadUsers = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const params: UserListParams = {
+        page: currentPage,
+        limit: pageSize,
+        search: searchTerm || undefined,
+        userType: userTypeFilter === 'all' ? undefined : userTypeFilter,
+        sortBy,
+        sortOrder
+      }
+
+      const response = await UserApiService.getUsers(params)
+      setUsers(response.users)
+      setTotalPages(response.pagination.totalPages)
+      setTotalUsers(response.pagination.total)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '加载用户列表失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 加载统计信息
+  const loadStats = async () => {
+    try {
+      const statsData = await UserApiService.getUserStats()
+      setStats(statsData)
+    } catch (err) {
+      console.error('加载统计信息失败:', err)
+    }
+  }
+
+  // 加载升级申请列表
+  const loadUpgradeRequests = async () => {
+    try {
+      setUpgradeRequestsLoading(true)
+      const response = await UpgradeRequestApiService.getUpgradeRequests({
+        status: 'all',
+        limit: 50,
+        offset: 0
+      })
+      setUpgradeRequests(response.requests)
+      setUpgradeRequestsStats(response.stats)
+    } catch (err) {
+      console.error('加载升级申请失败:', err)
+    } finally {
+      setUpgradeRequestsLoading(false)
+    }
+  }
+
+  // 处理升级申请
+  const handleUpgradeRequest = async (requestId: string, action: 'approve' | 'reject', comment?: string) => {
+    try {
+      await UpgradeRequestApiService.reviewUpgradeRequest(requestId, action, comment)
+      // 重新加载数据
+      await Promise.all([loadUpgradeRequests(), loadUsers(), loadStats()])
+    } catch (err) {
+      console.error('处理升级申请失败:', err)
+    }
+  }
+
+  // 初始加载
+  useEffect(() => {
+    loadUsers()
+    loadStats()
+    if (activeTab === 'upgrade-requests') {
+      loadUpgradeRequests()
+    }
+  }, [currentPage, userTypeFilter, sortBy, sortOrder, activeTab])
+
+  // 搜索防抖
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentPage === 1) {
+        loadUsers()
+      } else {
+        setCurrentPage(1)
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchTerm])
+
+  // 处理用户选择
+  const handleUserSelect = (userId: string, selected: boolean) => {
+    if (selected) {
+      setSelectedUsers([...selectedUsers, userId])
+    } else {
+      setSelectedUsers(selectedUsers.filter(id => id !== userId))
+    }
+  }
+
+  // 全选/取消全选
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      setSelectedUsers(users.map(u => u.id))
+    } else {
+      setSelectedUsers([])
+    }
+  }
+
+  // 处理用户类型更新
   const handleUserTypeChange = async (userId: string, newType: 'normal' | 'premium' | 'admin') => {
     try {
-      // TODO: 调用API更新用户类型
-      setUsers(prev => prev.map(user => 
-        user.id === userId ? { ...user, userType: newType } : user
-      ))
-      alert(`用户类型已更新为${getTypeDisplayName(newType)}`)
+      await UserApiService.updateUser(userId, { userType: newType })
+      await loadUsers() // 重新加载用户列表
+      alert(`用户类型已更新为${getUserTypeDisplay(newType)}`)
     } catch (error) {
       console.error('更新用户类型失败:', error)
       alert('更新失败，请重试')
     }
   }
 
+  // 处理用户删除
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('确定要删除此用户吗？此操作不可恢复！')) {
       return
     }
 
     try {
-      // TODO: 调用API删除用户
-      setUsers(prev => prev.filter(user => user.id !== userId))
+      await UserApiService.deleteUser(userId)
+      await loadUsers() // 重新加载用户列表
+      await loadStats() // 重新加载统计信息
       alert('用户已删除')
     } catch (error) {
       console.error('删除用户失败:', error)
@@ -101,52 +194,145 @@ export default function UserManagementPage() {
     }
   }
 
-  const getTypeDisplayName = (type: string) => {
-    const names = {
+  // 获取用户类型显示名称
+  const getUserTypeDisplay = (userType: string) => {
+    const typeMap = {
       normal: '普通用户',
       premium: '高级用户',
       admin: '管理员'
     }
-    return names[type as keyof typeof names] || '未知'
+    return typeMap[userType as keyof typeof typeMap] || userType
   }
 
-  const getTypeBadgeVariant = (type: string) => {
-    const variants = {
-      normal: 'secondary',
-      premium: 'warning',
-      admin: 'error'
+  // 获取用户类型徽章样式
+  const getUserTypeBadgeVariant = (userType: string) => {
+    const variantMap = {
+      normal: 'secondary' as const,
+      premium: 'warning' as const,
+      admin: 'error' as const
     }
-    return variants[type as keyof typeof variants] || 'secondary'
+    return variantMap[userType as keyof typeof variantMap] || 'secondary' as const
+  }
+
+  // 格式化日期
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   return (
     <PermissionGuard requiredUserType="admin">
       <div className="min-h-screen bg-background">
+        <Navigation />
         <div className="max-w-7xl mx-auto p-6">
           {/* 页面头部 */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-                <UsersIcon className="h-8 w-8" />
-                用户管理
-              </h1>
+              <h1 className="text-3xl font-bold text-foreground">用户管理</h1>
               <p className="text-muted-foreground mt-1">
                 管理系统用户和权限设置
               </p>
             </div>
-            <Button>
-              <ShieldCheckIcon className="h-4 w-4 mr-2" />
-              系统设置
-            </Button>
+
+            <div className="flex gap-3">
+              <Button variant="outline" size="sm">
+                <UserPlusIcon className="h-4 w-4 mr-2" />
+                邀请用户
+              </Button>
+              <Button variant="outline" size="sm">
+                导出数据
+              </Button>
+            </div>
           </div>
 
-          {/* 搜索和筛选 */}
+          {/* 统计卡片 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-primary">{stats.totalUsers}</p>
+                  <p className="text-sm text-muted-foreground">总用户数</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-muted-foreground">{stats.normalUsers}</p>
+                  <p className="text-sm text-muted-foreground">普通用户</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-warning">{stats.premiumUsers}</p>
+                  <p className="text-sm text-muted-foreground">高级用户</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-error">{stats.adminUsers}</p>
+                  <p className="text-sm text-muted-foreground">管理员</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-destructive">{stats.disabledUsers}</p>
+                  <p className="text-sm text-muted-foreground">已禁用</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-success">{stats.recentRegistrations}</p>
+                  <p className="text-sm text-muted-foreground">近7天注册</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* 选项卡 */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="users" className="flex items-center gap-2">
+                <UsersIcon className="h-4 w-4" />
+                用户管理
+              </TabsTrigger>
+              <TabsTrigger value="upgrade-requests" className="flex items-center gap-2">
+                <ClipboardDocumentListIcon className="h-4 w-4" />
+                升级申请
+                {upgradeRequestsStats.pending > 0 && (
+                  <Badge variant="error" size="sm">
+                    {upgradeRequestsStats.pending}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="users" className="space-y-6">
+              {/* 搜索和筛选 */}
           <Card className="mb-6">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
-                    <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <MagnifyingGlassIcon className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                     <Input
                       placeholder="搜索用户邮箱或姓名..."
                       value={searchTerm}
@@ -155,16 +341,33 @@ export default function UserManagementPage() {
                     />
                   </div>
                 </div>
-                <div className="md:w-48">
+
+                <div className="flex gap-2">
                   <select
-                    value={selectedUserType}
-                    onChange={(e) => setSelectedUserType(e.target.value)}
-                    className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                    value={userTypeFilter}
+                    onChange={(e) => setUserTypeFilter(e.target.value)}
+                    className="px-3 py-2 border border-border rounded-md bg-background text-foreground"
                   >
                     <option value="all">所有用户类型</option>
                     <option value="normal">普通用户</option>
                     <option value="premium">高级用户</option>
                     <option value="admin">管理员</option>
+                  </select>
+
+                  <select
+                    value={`${sortBy}-${sortOrder}`}
+                    onChange={(e) => {
+                      const [field, order] = e.target.value.split('-')
+                      setSortBy(field)
+                      setSortOrder(order as 'asc' | 'desc')
+                    }}
+                    className="px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                  >
+                    <option value="createdAt-desc">注册时间（新到旧）</option>
+                    <option value="createdAt-asc">注册时间（旧到新）</option>
+                    <option value="email-asc">邮箱（A-Z）</option>
+                    <option value="email-desc">邮箱（Z-A）</option>
+                    <option value="userType-asc">用户类型</option>
                   </select>
                 </div>
               </div>
@@ -174,122 +377,288 @@ export default function UserManagementPage() {
           {/* 用户列表 */}
           <Card>
             <CardHeader>
-              <CardTitle>
-                用户列表 ({filteredUsers.length})
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <UsersIcon className="h-5 w-5" />
+                  用户列表
+                  <span className="text-sm font-normal text-muted-foreground">
+                    ({totalUsers} 个用户)
+                  </span>
+                </CardTitle>
+
+                {selectedUsers.length > 0 && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">
+                      批量编辑 ({selectedUsers.length})
+                    </Button>
+                    <Button variant="destructive" size="sm">
+                      批量删除
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {loading ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">加载中...</p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <p className="text-muted-foreground mt-2">加载中...</p>
                 </div>
-              ) : filteredUsers.length === 0 ? (
+              ) : error ? (
+                <div className="text-center py-8">
+                  <p className="text-destructive">{error}</p>
+                  <Button onClick={loadUsers} className="mt-2">重试</Button>
+                </div>
+              ) : users.length === 0 ? (
                 <div className="text-center py-8">
                   <UsersIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">没有找到匹配的用户</p>
+                  <p className="text-muted-foreground">没有找到用户</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left py-3 px-4">用户信息</th>
-                        <th className="text-left py-3 px-4">用户类型</th>
-                        <th className="text-left py-3 px-4">注册时间</th>
-                        <th className="text-left py-3 px-4">最后登录</th>
-                        <th className="text-left py-3 px-4">状态</th>
-                        <th className="text-left py-3 px-4">操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.map((user) => (
-                        <tr key={user.id} className="border-b hover:bg-muted/50">
-                          <td className="py-3 px-4">
-                            <div>
-                              <p className="font-medium">{user.displayName}</p>
-                              <p className="text-sm text-muted-foreground">{user.email}</p>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <select
-                              value={user.userType}
-                              onChange={(e) => handleUserTypeChange(user.id, e.target.value as any)}
-                              className="px-2 py-1 border border-input rounded text-sm bg-background"
-                            >
-                              <option value="normal">普通用户</option>
-                              <option value="premium">高级用户</option>
-                              <option value="admin">管理员</option>
-                            </select>
-                          </td>
-                          <td className="py-3 px-4 text-sm text-muted-foreground">
-                            {user.createdAt.toLocaleDateString('zh-CN')}
-                          </td>
-                          <td className="py-3 px-4 text-sm text-muted-foreground">
-                            {user.lastLoginAt ? user.lastLoginAt.toLocaleDateString('zh-CN') : '从未登录'}
-                          </td>
-                          <td className="py-3 px-4">
-                            <Badge variant={user.isActive ? 'success' : 'secondary'}>
-                              {user.isActive ? '活跃' : '停用'}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline">
-                                <PencilIcon className="h-3 w-3" />
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                onClick={() => handleDeleteUser(user.id)}
-                                className="text-error hover:bg-error hover:text-white"
-                              >
-                                <TrashIcon className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </td>
+                <>
+                  {/* 用户表格 */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="text-left py-3 px-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedUsers.length === users.length}
+                              onChange={(e) => handleSelectAll(e.target.checked)}
+                              className="rounded"
+                            />
+                          </th>
+                          <th className="text-left py-3 px-2">用户</th>
+                          <th className="text-left py-3 px-2">类型</th>
+                          <th className="text-left py-3 px-2">状态</th>
+                          <th className="text-left py-3 px-2">注册时间</th>
+                          <th className="text-left py-3 px-2">最后登录</th>
+                          <th className="text-left py-3 px-2">操作</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {users.map((user) => (
+                          <tr key={user.id} className="border-b border-border hover:bg-muted/50">
+                            <td className="py-3 px-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedUsers.includes(user.id)}
+                                onChange={(e) => handleUserSelect(user.id, e.target.checked)}
+                                className="rounded"
+                              />
+                            </td>
+                            <td className="py-3 px-2">
+                              <div>
+                                <p className="font-medium">{user.displayName || '未设置'}</p>
+                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                              </div>
+                            </td>
+                            <td className="py-3 px-2">
+                              <Badge variant={getUserTypeBadgeVariant(user.userType)}>
+                                {getUserTypeDisplay(user.userType)}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-2">
+                              <Badge variant={user.disabled ? 'destructive' : 'success'}>
+                                {user.disabled ? '已禁用' : '正常'}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-2 text-sm text-muted-foreground">
+                              {formatDate(user.createdAt)}
+                            </td>
+                            <td className="py-3 px-2 text-sm text-muted-foreground">
+                              {user.lastLoginAt ? formatDate(user.lastLoginAt) : '从未登录'}
+                            </td>
+                            <td className="py-3 px-2">
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm">
+                                  <PencilIcon className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteUser(user.id)}
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 分页 */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-6">
+                      <p className="text-sm text-muted-foreground">
+                        显示第 {(currentPage - 1) * pageSize + 1} - {Math.min(currentPage * pageSize, totalUsers)} 条，
+                        共 {totalUsers} 条记录
+                      </p>
+
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(currentPage - 1)}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeftIcon className="h-4 w-4" />
+                          上一页
+                        </Button>
+
+                        <span className="flex items-center px-3 py-1 text-sm">
+                          第 {currentPage} / {totalPages} 页
+                        </span>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(currentPage + 1)}
+                          disabled={currentPage === totalPages}
+                        >
+                          下一页
+                          <ChevronRightIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
+            </TabsContent>
 
-          {/* 统计信息 */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">{users.length}</p>
-                <p className="text-sm text-muted-foreground">总用户数</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">
-                  {users.filter(u => u.userType === 'admin').length}
-                </p>
-                <p className="text-sm text-muted-foreground">管理员</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">
-                  {users.filter(u => u.userType === 'premium').length}
-                </p>
-                <p className="text-sm text-muted-foreground">高级用户</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">
-                  {users.filter(u => u.isActive).length}
-                </p>
-                <p className="text-sm text-muted-foreground">活跃用户</p>
-              </CardContent>
-            </Card>
-          </div>
+            <TabsContent value="upgrade-requests" className="space-y-6">
+              {/* 升级申请统计 */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-primary">{upgradeRequestsStats.total}</p>
+                      <p className="text-sm text-muted-foreground">总申请数</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-warning">{upgradeRequestsStats.pending}</p>
+                      <p className="text-sm text-muted-foreground">待审核</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-success">{upgradeRequestsStats.approved}</p>
+                      <p className="text-sm text-muted-foreground">已批准</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-destructive">{upgradeRequestsStats.rejected}</p>
+                      <p className="text-sm text-muted-foreground">已拒绝</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* 升级申请列表 */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>升级申请列表</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {upgradeRequestsLoading ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                      <p className="text-muted-foreground">加载中...</p>
+                    </div>
+                  ) : upgradeRequests.length === 0 ? (
+                    <div className="text-center py-8">
+                      <ClipboardDocumentListIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">暂无升级申请</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {upgradeRequests.map((request) => (
+                        <div key={request.id} className="border border-border rounded-lg p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div>
+                                  <p className="font-medium">{request.userEmail}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    申请时间：{new Date(request.createdAt).toLocaleString()}
+                                  </p>
+                                </div>
+                                <Badge
+                                  variant={
+                                    request.status === 'pending' ? 'warning' :
+                                    request.status === 'approved' ? 'success' : 'destructive'
+                                  }
+                                >
+                                  {request.status === 'pending' ? '待审核' :
+                                   request.status === 'approved' ? '已批准' : '已拒绝'}
+                                </Badge>
+                              </div>
+
+                              <div className="mb-3">
+                                <p className="text-sm font-medium mb-1">申请理由：</p>
+                                <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                                  {request.reason}
+                                </p>
+                              </div>
+
+                              {request.adminComment && (
+                                <div className="mb-3">
+                                  <p className="text-sm font-medium mb-1">管理员备注：</p>
+                                  <p className="text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                                    {request.adminComment}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            {request.status === 'pending' && (
+                              <div className="flex gap-2 ml-4">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleUpgradeRequest(request.id, 'approve')}
+                                  className="text-success border-success hover:bg-success hover:text-white"
+                                >
+                                  <CheckCircleIcon className="h-4 w-4 mr-1" />
+                                  批准
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleUpgradeRequest(request.id, 'reject')}
+                                  className="text-destructive border-destructive hover:bg-destructive hover:text-white"
+                                >
+                                  <XCircleIcon className="h-4 w-4 mr-1" />
+                                  拒绝
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </PermissionGuard>

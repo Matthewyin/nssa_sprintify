@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui'
 import { auth } from '@/lib/firebase'
-import { signInAnonymously } from 'firebase/auth'
+
 
 export default function TestAuthPage() {
   const [result, setResult] = useState<any>(null)
@@ -16,9 +16,7 @@ export default function TestAuthPage() {
     try {
       // 确保用户已登录
       if (!auth.currentUser) {
-        console.log('No user logged in, signing in anonymously...')
-        await signInAnonymously(auth)
-        console.log('Anonymous sign in successful')
+        throw new Error('用户未登录，请先登录')
       }
 
       // 获取token

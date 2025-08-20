@@ -1,6 +1,7 @@
 // API请求工具函数
 
 import type { ApiResponse } from '@/types'
+import { ENV_CONFIG } from './env-config'
 
 /**
  * API请求配置
@@ -52,12 +53,15 @@ class ApiClient {
 
       clearTimeout(timeoutId)
 
+      // 解析响应数据
+      const data = await response.json()
+
       // 检查响应状态
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        // 尝试从响应体中获取错误信息
+        const errorMessage = data?.error || data?.message || `HTTP ${response.status}: ${response.statusText}`
+        throw new Error(errorMessage)
       }
-
-      const data = await response.json()
       
       return {
         success: true,
@@ -161,10 +165,11 @@ class ApiClient {
    */
   async delete<T = any>(
     endpoint: string,
-    config?: RequestConfig
+    config?: RequestConfig & { data?: any }
   ): Promise<ApiResponse<T>> {
     return this.request<T>(endpoint, {
       method: 'DELETE',
+      body: config?.data ? JSON.stringify(config.data) : undefined,
       ...config,
     })
   }
@@ -185,21 +190,20 @@ class ApiClient {
   }
 }
 
-// 获取API基础URL
+/**
+ * 获取API基础URL
+ * 使用统一的环境配置
+ */
 const getApiBaseUrl = () => {
-  // 如果有环境变量配置的API URL，使用它
+  // 如果有环境变量配置的API URL，优先使用它
   if (process.env.NEXT_PUBLIC_API_URL) {
+    console.log('🔧 使用自定义API URL:', process.env.NEXT_PUBLIC_API_URL)
     return process.env.NEXT_PUBLIC_API_URL
   }
 
-  // 否则使用Firebase Functions的URL
-  // 在生产环境中，这应该是你的Firebase Functions的URL
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://asia-east1-n8n-project-460516.cloudfunctions.net'
-  }
-
-  // 开发环境临时使用生产API（因为模拟器端口被占用）
-  return 'https://asia-east1-n8n-project-460516.cloudfunctions.net'
+  // 使用统一的环境配置
+  console.log(`🌍 ${ENV_CONFIG.IS_DEVELOPMENT ? '开发' : '生产'}环境：使用API`, ENV_CONFIG.API.BASE_URL)
+  return ENV_CONFIG.API.BASE_URL
 }
 
 // 创建默认API客户端实例

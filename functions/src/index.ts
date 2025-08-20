@@ -5,9 +5,9 @@ import express from "express";
 
 // 在开发环境中连接到模拟器 - 必须在初始化之前设置
 if (process.env.FUNCTIONS_EMULATOR === 'true') {
-  // 设置环境变量以使用Auth模拟器
-  process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
-  process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
+  // 设置环境变量以使用Auth模拟器（使用新的端口配置）
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9098';
+  process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8081';
   console.log('Firebase Admin SDK configured for emulator environment');
 }
 
@@ -35,6 +35,8 @@ import { sprintRoutes } from "./routes/sprints";
 import { aiRoutes } from "./routes/ai";
 import { statsRoutes } from "./routes/stats";
 import { notificationRoutes } from "./routes/notifications";
+import { userRoutes } from "./routes/users";
+import { upgradeRequestRoutes } from "./routes/upgrade-requests";
 
 // 导入定时任务
 import { scheduledTasks } from "./scheduled/tasks";
@@ -45,6 +47,8 @@ app.use("/sprints", sprintRoutes);
 app.use("/ai", aiRoutes);
 app.use("/stats", statsRoutes);
 app.use("/notifications", notificationRoutes);
+app.use("/users", userRoutes);
+app.use("/upgrade-requests", upgradeRequestRoutes);
 
 // 健康检查端点
 app.get("/health", (req: express.Request, res: express.Response) => {

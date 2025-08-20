@@ -3,7 +3,7 @@
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInAnonymously,
+
   signOut,
   onAuthStateChanged,
   updateProfile,
@@ -280,37 +280,4 @@ export async function checkUserPermission(
   }
 }
 
-/**
- * 匿名登录（用于测试模拟器）
- */
-export async function loginAnonymously(): Promise<{ user: User; firebaseUser: FirebaseUser }> {
-  try {
-    console.log('🔥 开始匿名登录...')
-    const userCredential: UserCredential = await signInAnonymously(auth)
-    const firebaseUser = userCredential.user
 
-    console.log('✅ 匿名登录成功，用户ID:', firebaseUser.uid)
-
-    // 获取token并检查长度
-    const token = await firebaseUser.getIdToken()
-    console.log('🔍 Token长度:', token.length)
-    console.log('🔍 Token前50字符:', token.substring(0, 50))
-
-    // 创建用户对象
-    const user: User = {
-      uid: firebaseUser.uid,
-      email: firebaseUser.email || `anonymous-${firebaseUser.uid}@example.com`,
-      displayName: firebaseUser.displayName || '匿名用户',
-      userType: 'normal',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isEmailVerified: false
-    }
-
-    console.log('✅ 匿名用户对象创建成功')
-    return { user, firebaseUser }
-  } catch (error) {
-    console.error('❌ 匿名登录失败:', error)
-    throw error
-  }
-}

@@ -3,13 +3,13 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Button, Card, CardHeader, CardTitle, CardContent, Input, Badge, Progress } from "@/components/ui"
+import { Button, Card, CardHeader, CardTitle, CardContent, Input, Badge, Progress, Checkbox } from "@/components/ui"
 import { Navigation } from "@/components/navigation"
 import { PermissionGuard } from "@/components/permission-guard"
 import { useSprintStore } from "@/stores/sprint-store"
 import { useAuthInitialized } from "@/hooks/useAuth"
 import { SprintInfo, SprintStatus, SprintType } from "@/types/sprint"
-import { 
+import {
   PlusIcon,
   MagnifyingGlassIcon,
   CalendarIcon,
@@ -17,29 +17,34 @@ import {
   PlayIcon,
   PauseIcon,
   CheckIcon,
+  TrashIcon,
   AcademicCapIcon,
   BriefcaseIcon
 } from '@heroicons/react/24/outline'
 
 export default function SprintsPage() {
   const router = useRouter()
-  const { 
-    sprints, 
+  const {
+    sprints,
     currentSprint,
-    isLoading, 
-    error, 
-    loadSprints, 
+    isLoading,
+    error,
+    loadSprints,
     setCurrentSprint,
     startSprint,
     pauseSprint,
     completeSprint,
-    clearError 
+    deleteSprint,
+    deleteSprintsBatch,
+    clearError
   } = useSprintStore()
 
   const authInitialized = useAuthInitialized()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<SprintStatus | 'all'>('all')
   const [typeFilter, setTypeFilter] = useState<SprintType | 'all'>('all')
+  const [selectedSprints, setSelectedSprints] = useState<string[]>([])
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // 等待Auth初始化完成后再加载数据
   useEffect(() => {
@@ -115,6 +120,52 @@ export default function SprintsPage() {
     }
   }
 
+  const handleDeleteSprint = async (sprintId: string) => {
+    if (confirm('确定要删除这个冲刺吗？此操作无法撤销。')) {
+      try {
+        await deleteSprint(sprintId)
+      } catch (error) {
+        console.error('删除冲刺失败:', error)
+      }
+    }
+  }
+
+  const handleSelectSprint = (sprintId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedSprints(prev => [...prev, sprintId])
+    } else {
+      setSelectedSprints(prev => prev.filter(id => id !== sprintId))
+    }
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedSprints(filteredSprints.map(sprint => sprint.id))
+    } else {
+      setSelectedSprints([])
+    }
+  }
+
+  const handleBatchDelete = async () => {
+    if (selectedSprints.length === 0) return
+
+    if (confirm(`确定要删除选中的 ${selectedSprints.length} 个冲刺吗？此操作无法撤销。`)) {
+      setIsDeleting(true)
+      try {
+        const result = await deleteSprintsBatch(selectedSprints)
+        setSelectedSprints([])
+
+        if (result.notFound.length > 0) {
+          alert(`有 ${result.notFound.length} 个冲刺未找到，可能已被删除`)
+        }
+      } catch (error) {
+        console.error('批量删除失败:', error)
+      } finally {
+        setIsDeleting(false)
+      }
+    }
+  }
+
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('zh-CN', {
       year: 'numeric',
@@ -144,12 +195,24 @@ export default function SprintsPage() {
                 管理您的冲刺计划和进度
               </p>
             </div>
-            <Link href="/sprints/create">
-              <Button>
-                <PlusIcon className="h-4 w-4 mr-2" />
-                创建冲刺
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              {selectedSprints.length > 0 && (
+                <Button
+                  variant="destructive"
+                  onClick={handleBatchDelete}
+                  disabled={isDeleting}
+                >
+                  <TrashIcon className="w-4 h-4 mr-2" />
+                  删除选中 ({selectedSprints.length})
+                </Button>
+              )}
+              <Link href="/sprints/create">
+                <Button>
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  创建冲刺
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* 当前活跃冲刺 */}
@@ -268,7 +331,21 @@ export default function SprintsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <>
+              {/* 全选控制 */}
+              {filteredSprints.length > 0 && (
+                <div className="flex items-center gap-2 p-4 bg-gray-50 rounded-lg mb-4">
+                  <Checkbox
+                    checked={selectedSprints.length === filteredSprints.length}
+                    onCheckedChange={handleSelectAll}
+                  />
+                  <span className="text-sm text-gray-600">
+                    全选 ({selectedSprints.length}/{filteredSprints.length})
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredSprints.map((sprint) => {
                 const TypeIcon = getTypeIcon(sprint.type)
                 const daysRemaining = calculateDaysRemaining(sprint.endDate)
@@ -277,15 +354,23 @@ export default function SprintsPage() {
                   <Card key={sprint.id} className="hover:shadow-md transition-shadow">
                     <CardHeader>
                       <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg mb-2">{sprint.title}</CardTitle>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge variant={getStatusColor(sprint.status) as any}>
-                              {getStatusText(sprint.status)}
-                            </Badge>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <TypeIcon className="h-3 w-3" />
-                              {getTypeText(sprint.type)}
+                        <div className="flex items-start gap-3 flex-1">
+                          <Checkbox
+                            checked={selectedSprints.includes(sprint.id)}
+                            onCheckedChange={(checked) =>
+                              handleSelectSprint(sprint.id, checked as boolean)
+                            }
+                          />
+                          <div className="flex-1">
+                            <CardTitle className="text-lg mb-2">{sprint.title}</CardTitle>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant={getStatusColor(sprint.status) as any}>
+                                {getStatusText(sprint.status)}
+                              </Badge>
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <TypeIcon className="h-3 w-3" />
+                                {getTypeText(sprint.type)}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -366,6 +451,13 @@ export default function SprintsPage() {
                                 <PlayIcon className="h-3 w-3" />
                               </Button>
                             )}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteSprint(sprint.id)}
+                            >
+                              <TrashIcon className="h-3 w-3" />
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -374,6 +466,7 @@ export default function SprintsPage() {
                 )
               })}
             </div>
+            </>
           )}
 
           {/* 错误提示 */}

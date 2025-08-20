@@ -11,7 +11,8 @@ import {
   CreateSprintRequest,
   UpdateSprintRequest,
   SprintFilters,
-  PaginationParams
+  PaginationParams,
+  Task
 } from '@/types/sprint'
 
 /**
@@ -35,17 +36,29 @@ function waitForAuthInit(): Promise<void> {
  * 获取认证头部
  */
 async function getAuthHeaders(): Promise<Record<string, string>> {
-  // 等待Firebase Auth初始化完成
-  await waitForAuthInit()
+  try {
+    // 等待Firebase Auth初始化完成
+    await waitForAuthInit()
 
-  const user = auth.currentUser
-  if (!user) {
-    throw new Error('用户未登录')
-  }
+    const user = auth.currentUser
+    if (!user) {
+      console.error('❌ 用户未登录，当前用户状态:', user)
+      throw new Error('缺少认证token')
+    }
 
-  const token = await user.getIdToken()
-  return {
-    'Authorization': `Bearer ${token}`
+    const token = await user.getIdToken()
+    if (!token) {
+      console.error('❌ 无法获取认证token')
+      throw new Error('缺少认证token')
+    }
+
+    console.log('✅ 认证token获取成功')
+    return {
+      'Authorization': `Bearer ${token}`
+    }
+  } catch (error) {
+    console.error('❌ 获取认证头部失败:', error)
+    throw new Error('缺少认证token')
   }
 }
 
@@ -247,6 +260,85 @@ export class SprintApiService {
       }
     } catch (error) {
       console.error('Complete sprint error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 删除单个冲刺
+   */
+  static async deleteSprint(sprintId: string): Promise<void> {
+    try {
+      const headers = await getAuthHeaders()
+
+      const response = await apiClient.delete<{
+        success: boolean
+        message?: string
+      }>(`${API_ENDPOINTS.SPRINTS.LIST}/${sprintId}`, { headers })
+
+      if (!response.success || !response.data?.success) {
+        throw new Error(response.error || response.data?.message || '删除冲刺失败')
+      }
+    } catch (error) {
+      console.error('Delete sprint error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 批量删除冲刺
+   */
+  static async deleteSprintsBatch(sprintIds: string[]): Promise<{
+    deleted: string[]
+    notFound: string[]
+  }> {
+    try {
+      const headers = await getAuthHeaders()
+
+      const response = await apiClient.delete<{
+        success: boolean
+        message?: string
+        deleted?: string[]
+        notFound?: string[]
+      }>(API_ENDPOINTS.SPRINTS.LIST, {
+        headers,
+        data: { sprintIds }
+      })
+
+      if (!response.success || !response.data?.success) {
+        throw new Error(response.error || response.data?.message || '批量删除冲刺失败')
+      }
+
+      return {
+        deleted: response.data.deleted || [],
+        notFound: response.data.notFound || []
+      }
+    } catch (error) {
+      console.error('Batch delete sprints error:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 获取Sprint的任务列表
+   */
+  static async getTasks(sprintId: string): Promise<Task[]> {
+    try {
+      const headers = await getAuthHeaders()
+
+      const response = await apiClient.get<{
+        success: boolean
+        data?: Task[]
+        message?: string
+      }>(`${API_ENDPOINTS.SPRINTS.LIST}/${sprintId}/tasks`, undefined, { headers })
+
+      if (response.success && response.data?.success) {
+        return response.data.data || []
+      } else {
+        throw new Error(response.error || response.data?.message || '获取任务列表失败')
+      }
+    } catch (error) {
+      console.error('Get tasks error:', error)
       throw error
     }
   }

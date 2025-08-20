@@ -51,6 +51,7 @@ interface SprintState {
   createSprint: (request: CreateSprintRequest) => Promise<SprintInfo>
   updateSprint: (id: string, updates: UpdateSprintRequest) => Promise<void>
   deleteSprint: (id: string) => Promise<void>
+  deleteSprintsBatch: (sprintIds: string[]) => Promise<{ deleted: string[], notFound: string[] }>
   startSprint: (id: string) => Promise<void>
   pauseSprint: (id: string) => Promise<void>
   completeSprint: (id: string) => Promise<void>
@@ -64,7 +65,7 @@ interface SprintState {
   createTask: (sprintId: string, request: CreateTaskRequest) => Promise<Task>
   updateTask: (taskId: string, updates: UpdateTaskRequest) => Promise<void>
   deleteTask: (taskId: string) => Promise<void>
-  completeTask: (taskId: string) => Promise<void>
+  completeTask: (taskId: string, milestoneSummary?: string) => Promise<void>
   
   // 里程碑管理 Actions
   loadMilestones: (sprintId: string) => Promise<void>
@@ -179,13 +180,47 @@ export const useSprintStore = create<SprintState>()(
       deleteSprint: async (id) => {
         set({ isLoading: true, error: null })
         try {
+          // 调用API删除冲刺
+          await SprintApiService.deleteSprint(id)
+
+          // 更新本地状态
           set((state) => ({
             sprints: state.sprints.filter(sprint => sprint.id !== id),
             currentSprint: state.currentSprint?.id === id ? null : state.currentSprint,
             isLoading: false
           }))
         } catch (error) {
-          set({ error: '删除冲刺失败', isLoading: false })
+          console.error('Delete sprint error:', error)
+          set({
+            error: error instanceof Error ? error.message : '删除冲刺失败',
+            isLoading: false
+          })
+          throw error
+        }
+      },
+
+      deleteSprintsBatch: async (sprintIds) => {
+        set({ isLoading: true, error: null })
+        try {
+          // 调用API批量删除冲刺
+          const result = await SprintApiService.deleteSprintsBatch(sprintIds)
+
+          // 更新本地状态
+          set((state) => ({
+            sprints: state.sprints.filter(sprint => !result.deleted.includes(sprint.id)),
+            currentSprint: result.deleted.includes(state.currentSprint?.id || '')
+              ? null
+              : state.currentSprint,
+            isLoading: false
+          }))
+
+          return result
+        } catch (error) {
+          console.error('Batch delete sprints error:', error)
+          set({
+            error: error instanceof Error ? error.message : '批量删除冲刺失败',
+            isLoading: false
+          })
           throw error
         }
       },
@@ -237,10 +272,18 @@ export const useSprintStore = create<SprintState>()(
       loadTasks: async (sprintId) => {
         set({ isLoading: true, error: null })
         try {
-          // TODO: 调用API加载任务
-          set({ isLoading: false })
+          // 调用API加载任务
+          const tasks = await SprintApiService.getTasks(sprintId)
+          set({
+            currentTasks: tasks,
+            isLoading: false
+          })
         } catch (error) {
-          set({ error: '加载任务失败', isLoading: false })
+          console.error('Load tasks error:', error)
+          set({
+            error: error instanceof Error ? error.message : '加载任务失败',
+            isLoading: false
+          })
         }
       },
 
@@ -304,11 +347,12 @@ export const useSprintStore = create<SprintState>()(
         }
       },
 
-      completeTask: async (taskId) => {
-        await get().updateTask(taskId, { 
-          status: 'completed', 
+      completeTask: async (taskId, milestoneSummary) => {
+        await get().updateTask(taskId, {
+          status: 'completed',
           progress: 100,
-          completedAt: new Date()
+          completedAt: new Date(),
+          milestoneSummary: milestoneSummary || undefined
         })
       },
 

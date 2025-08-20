@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button, Badge } from '@/components/ui'
 import { useAuthStore } from '@/stores'
+import { useSprintStore } from '@/stores/sprint-store'
 import { usePermission, UserTypeDisplay } from '@/components/permission-guard'
 import {
   Bars3Icon,
@@ -19,14 +20,27 @@ import {
   PlusIcon,
   PresentationChartLineIcon,
   Square3Stack3DIcon,
-  SparklesIcon
+  SparklesIcon,
+  StarIcon,
+  ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline'
 
 export function Navigation() {
   const router = useRouter()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { user, isAuthenticated, logout } = useAuthStore()
+  const { sprints, loadSprints } = useSprintStore()
   const { isAdmin, isPremium } = usePermission()
+
+  // 加载Sprint数据
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadSprints()
+    }
+  }, [isAuthenticated, loadSprints])
+
+  // 计算活跃Sprint数量
+  const activeSprintCount = sprints.filter(s => s.status === 'active').length
 
   const handleLogout = async () => {
     await logout()
@@ -51,7 +65,8 @@ export function Navigation() {
       name: '我的冲刺',
       href: '/sprints',
       icon: ChartBarIcon,
-      show: isAuthenticated
+      show: isAuthenticated,
+      badge: activeSprintCount > 0 ? activeSprintCount.toString() : undefined
     },
     
     {
@@ -76,11 +91,17 @@ export function Navigation() {
       show: isAuthenticated
     },
     {
+      name: '申请升级',
+      href: '/upgrade-request',
+      icon: StarIcon,
+      show: isAuthenticated && !isAdmin && !isPremium,
+      badge: '高级'
+    },
+    {
       name: '用户管理',
       href: '/admin/users',
       icon: UsersIcon,
-      show: isAdmin,
-      badge: '管理员'
+      show: isAdmin
     }
   ]
 
@@ -123,17 +144,17 @@ export function Navigation() {
             </Link>
 
             {/* 桌面端导航 */}
-            <div className="hidden md:ml-8 md:flex md:space-x-4">
+            <div className="hidden md:ml-6 md:flex md:space-x-1 lg:space-x-3">
               {navigationItems.filter(item => item.show).map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="flex items-center px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  className="flex items-center px-2 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors whitespace-nowrap"
                 >
-                  <item.icon className="h-4 w-4 mr-2" />
-                  {item.name}
+                  <item.icon className="h-4 w-4 mr-1" />
+                  <span>{item.name}</span>
                   {item.badge && (
-                    <Badge variant="error" size="sm" className="ml-2">
+                    <Badge variant="error" size="sm" className="ml-1">
                       {item.badge}
                     </Badge>
                   )}
@@ -152,10 +173,10 @@ export function Navigation() {
                 {/* 用户菜单 */}
                 <div className="relative group">
                   <button className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium text-foreground hover:bg-muted transition-colors">
-                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
                       <UserIcon className="h-4 w-4 text-primary" />
                     </div>
-                    <span className="hidden md:block">{user.displayName}</span>
+                    <span className="hidden md:block truncate max-w-[120px]">{user.displayName}</span>
                   </button>
                   
                   {/* 下拉菜单 */}

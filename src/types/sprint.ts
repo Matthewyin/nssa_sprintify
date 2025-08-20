@@ -97,7 +97,8 @@ export interface Task {
   // 附加信息
   notes?: string
   attachments?: string[] // 文件URL
-  
+  milestoneSummary?: string // 里程碑总结（完成任务时的总结）
+
   // 时间戳
   createdAt: Date
   updatedAt: Date
@@ -178,6 +179,19 @@ export interface CreateSprintRequest {
   duration?: number
   tags?: string[]
   category?: string
+  // AI生成的任务和元数据
+  aiGeneratedTasks?: Array<{
+    title: string
+    description: string
+    estimatedHours: number
+    priority: 'high' | 'medium' | 'low'
+    category?: string
+    dependencies?: string[]
+  }>
+  aiPlanMetadata?: {
+    totalEstimatedHours: number
+    dailyHoursRecommendation: number
+  }
 }
 
 /**

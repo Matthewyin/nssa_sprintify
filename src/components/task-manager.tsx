@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Button, Card, CardHeader, CardTitle, CardContent, Input, Badge, Progress } from "@/components/ui"
+import { Button, Card, CardHeader, CardTitle, CardContent, Input, Badge, Progress, Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, Textarea } from "@/components/ui"
 import { useSprintStore } from "@/stores/sprint-store"
 import { Task, TaskStatus, TaskPriority, CreateTaskRequest, UpdateTaskRequest } from "@/types/sprint"
 import { 
@@ -39,6 +39,11 @@ export function TaskManager({ sprintId }: TaskManagerProps) {
     estimatedTime: 60,
     tags: []
   })
+
+  // 里程碑总结相关状态
+  const [showMilestoneSummary, setShowMilestoneSummary] = useState(false)
+  const [completingTask, setCompletingTask] = useState<Task | null>(null)
+  const [milestoneSummary, setMilestoneSummary] = useState('')
 
   useEffect(() => {
     loadTasks(sprintId)
@@ -96,13 +101,42 @@ export function TaskManager({ sprintId }: TaskManagerProps) {
   const handleStatusChange = async (taskId: string, status: TaskStatus) => {
     try {
       if (status === 'completed') {
-        await completeTask(taskId)
+        // 完成任务时显示里程碑总结对话框
+        const task = currentTasks.find(t => t.id === taskId)
+        if (task) {
+          setCompletingTask(task)
+          setShowMilestoneSummary(true)
+        }
       } else {
         await updateTask(taskId, { status })
       }
     } catch (error) {
       console.error('Update task status failed:', error)
     }
+  }
+
+  // 处理里程碑总结提交
+  const handleMilestoneSummarySubmit = async () => {
+    if (!completingTask) return
+
+    try {
+      // 完成任务并添加里程碑总结
+      await completeTask(completingTask.id, milestoneSummary)
+
+      // 重置状态
+      setShowMilestoneSummary(false)
+      setCompletingTask(null)
+      setMilestoneSummary('')
+    } catch (error) {
+      console.error('Complete task with milestone summary failed:', error)
+    }
+  }
+
+  // 取消里程碑总结
+  const handleMilestoneSummaryCancel = () => {
+    setShowMilestoneSummary(false)
+    setCompletingTask(null)
+    setMilestoneSummary('')
   }
 
   const getPriorityColor = (priority: TaskPriority) => {
@@ -403,6 +437,55 @@ export function TaskManager({ sprintId }: TaskManagerProps) {
           <p className="text-muted-foreground">加载中...</p>
         </div>
       )}
+
+      {/* 里程碑总结对话框 */}
+      <Dialog open={showMilestoneSummary} onOpenChange={setShowMilestoneSummary}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckIcon className="h-5 w-5 text-success" />
+              完成任务 - 里程碑达成！
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {completingTask && (
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="font-medium text-sm">{completingTask.title}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {completingTask.description}
+                </p>
+              </div>
+            )}
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                里程碑总结 <span className="text-muted-foreground">(可选，最多300字)</span>
+              </label>
+              <Textarea
+                value={milestoneSummary}
+                onChange={(e) => setMilestoneSummary(e.target.value)}
+                placeholder="记录这个任务的完成过程、收获或心得..."
+                maxLength={300}
+                rows={4}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground mt-1 text-right">
+                {milestoneSummary.length}/300
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={handleMilestoneSummaryCancel}>
+              取消
+            </Button>
+            <Button onClick={handleMilestoneSummarySubmit}>
+              完成任务
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

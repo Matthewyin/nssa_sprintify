@@ -1,14 +1,15 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardHeader, CardTitle, CardContent, Progress, Badge } from "@/components/ui"
+import { Card, CardHeader, CardTitle, CardContent, Progress, Badge, Button } from "@/components/ui"
 import { Navigation } from "@/components/navigation"
 import { PermissionGuard } from "@/components/permission-guard"
 import { useSprintStore } from "@/stores/sprint-store"
 import { useAuthStore } from "@/stores/auth-store"
 import { useAuthInitialized } from "@/hooks/useAuth"
 import { SprintInfo } from "@/types/sprint"
-import { 
+import { SprintSelector } from "@/components/sprint-selector"
+import {
   CalendarIcon,
   ClockIcon,
   TrophyIcon,
@@ -16,7 +17,8 @@ import {
   ChartBarIcon,
   BoltIcon,
   CheckCircleIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  PlayIcon
 } from '@heroicons/react/24/outline'
 
 export default function DashboardPage() {
@@ -29,6 +31,9 @@ export default function DashboardPage() {
   } = useSprintStore()
 
   const authInitialized = useAuthInitialized()
+
+  // 选中的冲刺状态
+  const [selectedSprint, setSelectedSprint] = useState<SprintInfo | null>(null)
 
   const [stats, setStats] = useState({
     totalSprints: 0,
@@ -44,6 +49,34 @@ export default function DashboardPage() {
   useEffect(() => {
     if (authInitialized) {
       loadSprints()
+    }
+  }, [authInitialized, loadSprints])
+
+  // 智能默认选择冲刺
+  useEffect(() => {
+    if (sprints.length > 0 && !selectedSprint) {
+      // 优先选择活跃冲刺，其次是最新的草稿冲刺
+      const activeSprint = sprints.find(s => s.status === 'active')
+      const latestDraftSprint = sprints
+        .filter(s => s.status === 'draft')
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())[0]
+
+      setSelectedSprint(activeSprint || latestDraftSprint || null)
+    }
+  }, [sprints, selectedSprint])
+
+  // 页面可见性检测，返回时刷新数据
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && authInitialized) {
+        console.log('🔄 页面重新可见，刷新数据')
+        loadSprints()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [authInitialized, loadSprints])
 
@@ -95,15 +128,27 @@ export default function DashboardPage() {
     return Math.round((stats.completedTasks / stats.totalTasks) * 100)
   }
 
-  const getActiveSprintProgress = (): number => {
-    if (!currentSprint) return 0
-    return currentSprint.progress
+  // 获取当前活跃的冲刺（第一个状态为active的冲刺）
+  const getActiveSprint = () => {
+    return sprints.find(s => s.status === 'active') || null
+  }
+
+  // 获取要显示的冲刺（使用选中的冲刺）
+  const getDisplaySprint = () => {
+    return selectedSprint
+  }
+
+  const getSelectedSprintProgress = (): number => {
+    const sprint = getDisplaySprint()
+    if (!sprint) return 0
+    return sprint.progress
   }
 
   const getDaysUntilDeadline = (): number => {
-    if (!currentSprint) return 0
+    const sprint = getDisplaySprint()
+    if (!sprint) return 0
     const now = new Date()
-    const end = new Date(currentSprint.endDate)
+    const end = new Date(sprint.endDate)
     const diffTime = end.getTime() - now.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     return Math.max(0, diffDays)
@@ -154,17 +199,19 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3 mb-4">
                   <BoltIcon className="h-8 w-8 text-primary" />
                   <div>
-                    <p className="text-sm text-muted-foreground">当前冲刺</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedSprint ? '选中冲刺' : '冲刺进度'}
+                    </p>
                     <p className="text-2xl font-bold text-primary">
-                      {getActiveSprintProgress()}%
+                      {getSelectedSprintProgress()}%
                     </p>
                   </div>
                 </div>
-                {currentSprint && (
+                {getDisplaySprint() && (
                   <div className="space-y-2">
-                    <Progress value={getActiveSprintProgress()} className="h-2" />
+                    <Progress value={getSelectedSprintProgress()} className="h-2" />
                     <p className="text-xs text-muted-foreground">
-                      {currentSprint.title}
+                      {getDisplaySprint()!.title}
                     </p>
                   </div>
                 )}
@@ -225,22 +272,49 @@ export default function DashboardPage() {
             <div className="lg:col-span-2">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ChartBarIcon className="h-5 w-5" />
-                    当前冲刺概览
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <ChartBarIcon className="h-5 w-5" />
+                      冲刺概览
+                    </CardTitle>
+                    <SprintSelector
+                      sprints={sprints}
+                      selectedSprint={selectedSprint}
+                      onSprintSelect={setSelectedSprint}
+                      isLoading={isLoading}
+                    />
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  {currentSprint ? (
+                  {getDisplaySprint() ? (
                     <div className="space-y-6">
                       <div>
                         <div className="flex items-center justify-between mb-2">
-                          <h3 className="text-lg font-semibold">{currentSprint.title}</h3>
-                          <Badge variant="warning">进行中</Badge>
+                          <h3 className="text-lg font-semibold">{getDisplaySprint()!.title}</h3>
+                          {getDisplaySprint()!.status === 'active' ? (
+                            <Badge variant="warning">进行中</Badge>
+                          ) : (
+                            <Badge variant="secondary">草稿</Badge>
+                          )}
                         </div>
                         <p className="text-muted-foreground mb-4">
-                          {currentSprint.description}
+                          {getDisplaySprint()!.description}
                         </p>
+
+                        {getDisplaySprint()!.status === 'draft' && (
+                          <div className="mb-4">
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                // TODO: 实现启动冲刺功能
+                                console.log('启动冲刺:', getDisplaySprint()!.id)
+                              }}
+                            >
+                              <PlayIcon className="h-4 w-4 mr-2" />
+                              开始冲刺
+                            </Button>
+                          </div>
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -252,21 +326,21 @@ export default function DashboardPage() {
                         <div className="text-center p-4 bg-muted/50 rounded-lg">
                           <CheckCircleIcon className="h-6 w-6 mx-auto mb-2 text-success" />
                           <p className="text-sm text-muted-foreground">已完成任务</p>
-                          <p className="text-xl font-bold">{currentSprint.stats.completedTasks}</p>
+                          <p className="text-xl font-bold">{getDisplaySprint()!.stats.completedTasks}</p>
                         </div>
                         <div className="text-center p-4 bg-muted/50 rounded-lg">
                           <TrophyIcon className="h-6 w-6 mx-auto mb-2 text-warning" />
                           <p className="text-sm text-muted-foreground">里程碑</p>
-                          <p className="text-xl font-bold">{currentSprint.stats.completedMilestones || 0}</p>
+                          <p className="text-xl font-bold">{getDisplaySprint()!.stats.completedMilestones || 0}</p>
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
                           <span>整体进度</span>
-                          <span>{currentSprint.progress}%</span>
+                          <span>{getDisplaySprint()!.progress}%</span>
                         </div>
-                        <Progress value={currentSprint.progress} className="h-3" />
+                        <Progress value={getDisplaySprint()!.progress} className="h-3" />
                       </div>
 
                       {getDaysUntilDeadline() <= 3 && getDaysUntilDeadline() > 0 && (

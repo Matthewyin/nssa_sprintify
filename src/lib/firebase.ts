@@ -5,27 +5,41 @@ import { getAuth, Auth, connectAuthEmulator } from 'firebase/auth'
 import { getFirestore, Firestore, connectFirestoreEmulator } from 'firebase/firestore'
 import { getFunctions, Functions, connectFunctionsEmulator } from 'firebase/functions'
 import { getMessaging, Messaging, isSupported } from 'firebase/messaging'
-import { logFirebaseConfig } from './firebase-diagnostics'
+import { ENV_CONFIG, logEnvironmentInfo } from './env-config'
 
-// Firebase配置
+// Firebase配置 - 直接使用环境变量以避免客户端访问问题
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyAQVuM1XSbFw_x3IQ0ZV98XwCWGbgFhIGM",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "n8n-project-460516.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "n8n-project-460516",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "n8n-project-460516.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "18068529376",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:18068529376:web:d1fe5d7e4e53c2817a3085",
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 }
 
-// 验证配置（延迟执行，确保环境变量已加载）
+// 打印环境配置信息（仅在客户端）
 if (typeof window !== 'undefined') {
   setTimeout(() => {
-    const isValid = validateFirebaseConfig()
-    if (!isValid) {
-      console.warn('Firebase配置无效，某些功能可能无法正常工作')
-    }
+    // 临时禁用环境变量验证，直接打印基本信息
+    console.log('🔧 Firebase配置状态:')
+    console.log(`  - NODE_ENV: ${ENV_CONFIG.NODE_ENV}`)
+    console.log(`  - Firebase模拟器: ${ENV_CONFIG.FIREBASE_EMULATOR.ENABLED ? '启用' : '禁用'}`)
+    console.log(`  - API基础URL: ${ENV_CONFIG.API.BASE_URL}`)
+    console.log('✅ Firebase配置已加载（跳过详细验证）')
   }, 100)
+}
+
+// 在开发环境中设置模拟器环境变量（必须在初始化之前）
+if (typeof window !== 'undefined' && ENV_CONFIG.FIREBASE_EMULATOR.ENABLED) {
+  console.log('🔧 开发环境：设置模拟器环境变量')
+  // 强制设置环境变量
+  if (typeof process !== 'undefined' && process.env) {
+    process.env.FIREBASE_AUTH_EMULATOR_HOST = `127.0.0.1:${ENV_CONFIG.FIREBASE_EMULATOR.AUTH_PORT}`
+    process.env.FIRESTORE_EMULATOR_HOST = `127.0.0.1:${ENV_CONFIG.FIREBASE_EMULATOR.FIRESTORE_PORT}`
+    console.log('  - Auth模拟器:', process.env.FIREBASE_AUTH_EMULATOR_HOST)
+    console.log('  - Firestore模拟器:', process.env.FIRESTORE_EMULATOR_HOST)
+  }
 }
 
 // 初始化Firebase应用
@@ -53,41 +67,57 @@ export const auth: Auth = getAuth(app)
 export const db: Firestore = getFirestore(app)
 export const functions: Functions = getFunctions(app)
 
-// 临时禁用模拟器，使用生产环境进行测试
-console.log('🔥 临时使用生产环境Firebase（用于测试Sprint创建功能）')
-
-/*
-// 在客户端环境中同步连接到模拟器
-if (typeof window !== 'undefined' &&
-    process.env.NODE_ENV === 'development' &&
-    process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true') {
-
-  console.log('🔍 检查模拟器连接条件:')
-  console.log('  - 客户端环境: ✅')
-  console.log('  - NODE_ENV:', process.env.NODE_ENV)
-  console.log('  - USE_FIREBASE_EMULATOR:', process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR)
-  console.log('🚀 开始同步连接Firebase模拟器...')
-
-  try {
-    // 同步连接Auth模拟器
-    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
-    console.log('✅ Auth模拟器连接成功')
-
-    // 同步连接Firestore模拟器
-    connectFirestoreEmulator(db, '127.0.0.1', 8080)
-    console.log('✅ Firestore模拟器连接成功')
-
-    // 同步连接Functions模拟器
-    connectFunctionsEmulator(functions, '127.0.0.1', 5001)
-    console.log('✅ Functions模拟器连接成功')
-
-    console.log('🎉 Firebase模拟器套件连接成功')
-  } catch (error) {
-    console.log('Firebase模拟器连接状态:', error instanceof Error ? error.message : '未知错误')
+// 检查是否需要强制重置Firebase连接
+let needsReset = false
+if (typeof window !== 'undefined' && ENV_CONFIG.FIREBASE_EMULATOR.ENABLED) {
+  // 检查localStorage中是否有重置标记
+  const resetFlag = localStorage.getItem('firebase-needs-reset')
+  if (resetFlag === 'true') {
+    needsReset = true
+    localStorage.removeItem('firebase-needs-reset')
   }
-} else if (typeof window !== 'undefined') {
-  console.log('❌ 客户端模拟器连接条件不满足，使用生产环境')
-*/
+}
+
+// 在客户端连接模拟器（在服务初始化之后）
+if (typeof window !== 'undefined') {
+  if (ENV_CONFIG.FIREBASE_EMULATOR.ENABLED) {
+    console.log('🔥 开发环境：连接Firebase模拟器')
+    console.log(`  - Auth端口: ${ENV_CONFIG.FIREBASE_EMULATOR.AUTH_PORT}`)
+    console.log(`  - Firestore端口: ${ENV_CONFIG.FIREBASE_EMULATOR.FIRESTORE_PORT}`)
+    console.log(`  - Functions端口: ${ENV_CONFIG.FIREBASE_EMULATOR.FUNCTIONS_PORT}`)
+
+    try {
+      // 连接Auth模拟器
+      connectAuthEmulator(auth, `http://127.0.0.1:${ENV_CONFIG.FIREBASE_EMULATOR.AUTH_PORT}`, { disableWarnings: true })
+      console.log('✅ Auth模拟器连接成功')
+
+      // 连接Firestore模拟器
+      connectFirestoreEmulator(db, '127.0.0.1', ENV_CONFIG.FIREBASE_EMULATOR.FIRESTORE_PORT)
+      console.log('✅ Firestore模拟器连接成功')
+
+      // 连接Functions模拟器
+      connectFunctionsEmulator(functions, '127.0.0.1', ENV_CONFIG.FIREBASE_EMULATOR.FUNCTIONS_PORT)
+      console.log('✅ Functions模拟器连接成功')
+
+      console.log('🎉 Firebase模拟器套件连接成功')
+      console.log(`📱 模拟器UI: http://127.0.0.1:${ENV_CONFIG.FIREBASE_EMULATOR.UI_PORT}`)
+
+      // 设置成功连接标记
+      localStorage.setItem('firebase-emulator-connected', 'true')
+    } catch (error) {
+      console.error('❌ Firebase模拟器连接失败:', error)
+      console.log('请确保Firebase模拟器正在运行: firebase emulators:start')
+      console.log('如果仍然连接到错误端口，请清除浏览器缓存并刷新页面')
+
+      // 设置需要重置标记
+      localStorage.setItem('firebase-needs-reset', 'true')
+    }
+  } else {
+    console.log('🌐 生产环境：使用真实Firebase服务')
+  }
+} else {
+  console.log('🖥️ 服务器端环境，Firebase将根据环境自动配置')
+}
 
 // 初始化Firebase Messaging（仅在支持的环境中）
 let messaging: Messaging | null = null

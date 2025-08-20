@@ -33,6 +33,8 @@ export default function CreateSprintPage() {
     template: '30days',
     difficulty: 'intermediate',
     startDate: new Date(),
+    endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 默认30天后
+    duration: 30,
     tags: []
   })
 
@@ -98,11 +100,28 @@ export default function CreateSprintPage() {
     }
 
     try {
+      // 如果有AI生成的计划，根据任务数量和每日推荐时长计算持续时间
+      let finalDuration = recommendations.duration
+      if (aiGeneratedPlan) {
+        // 基于每日推荐时长和总时长计算天数，最少3天，最多90天
+        const calculatedDays = Math.ceil(aiGeneratedPlan.totalEstimatedHours / aiGeneratedPlan.dailyHoursRecommendation)
+        finalDuration = Math.max(3, Math.min(90, calculatedDays))
+      }
+      const finalTemplate = aiGeneratedPlan ? 'custom' : selectedTemplate
+
       const sprintRequest: CreateSprintRequest = {
         ...formData,
-        template: selectedTemplate,
-        duration: recommendations.duration,
-        endDate: new Date(formData.startDate.getTime() + recommendations.duration * 24 * 60 * 60 * 1000)
+        template: finalTemplate,
+        duration: finalDuration,
+        endDate: new Date(formData.startDate.getTime() + finalDuration * 24 * 60 * 60 * 1000),
+        // 如果有AI生成的任务，添加到请求中
+        ...(aiGeneratedPlan && {
+          aiGeneratedTasks: aiGeneratedPlan.tasks,
+          aiPlanMetadata: {
+            totalEstimatedHours: aiGeneratedPlan.totalEstimatedHours,
+            dailyHoursRecommendation: aiGeneratedPlan.dailyHoursRecommendation
+          }
+        })
       }
 
       console.log('🔍 发送的Sprint数据:', sprintRequest)
@@ -113,13 +132,29 @@ export default function CreateSprintPage() {
         template: sprintRequest.template,
         startDate: sprintRequest.startDate,
         endDate: sprintRequest.endDate,
-        duration: sprintRequest.duration
+        duration: sprintRequest.duration,
+        finalDuration,
+        aiGeneratedPlan: !!aiGeneratedPlan
       })
+
+      // 验证必需字段
+      if (!sprintRequest.endDate) {
+        console.error('❌ endDate 缺失:', sprintRequest.endDate)
+        throw new Error('结束日期计算失败')
+      }
 
       const newSprint = await createSprint(sprintRequest)
       router.push(`/sprints/${newSprint.id}`)
     } catch (error) {
       console.error('创建冲刺失败:', error)
+
+      // 检查是否是重复名称错误
+      if (error instanceof Error && error.message.includes('冲刺名称已存在')) {
+        setFormErrors(prev => ({
+          ...prev,
+          title: ['冲刺名称已存在，请使用不同的名称']
+        }))
+      }
     }
   }
 
