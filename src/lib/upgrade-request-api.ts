@@ -6,20 +6,55 @@ import { apiClient } from '@/lib/api'
 import { auth } from '@/lib/firebase'
 
 /**
+ * 等待Firebase Auth初始化完成
+ */
+async function waitForAuthInit(): Promise<void> {
+  return new Promise((resolve) => {
+    // 如果已经有用户或者明确没有用户，直接返回
+    if (auth.currentUser !== undefined) {
+      console.log('🔥 Upgrade API - Auth已初始化，当前用户:', auth.currentUser?.uid || '未登录')
+      resolve()
+      return
+    }
+
+    console.log('🔥 Upgrade API - 等待Auth初始化...')
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      console.log('🔥 Upgrade API - Auth状态变化:', user?.uid || '未登录')
+      unsubscribe()
+      resolve()
+    })
+  })
+}
+
+/**
  * 获取认证头部
  */
 async function getAuthHeaders() {
   try {
-    const token = await auth.currentUser?.getIdToken()
-    if (!token) {
-      throw new Error('缺少认证token')
+    await waitForAuthInit()
+
+    const user = auth.currentUser
+    if (!user) {
+      console.error('❌ Upgrade API - 用户未登录，当前用户状态:', user)
+      throw new Error('用户未登录，请先登录后再试')
     }
-    
+
+    console.log('🔥 Upgrade API - 正在获取认证token...')
+    const token = await user.getIdToken(true) // 强制刷新token
+    if (!token) {
+      console.error('❌ Upgrade API - 无法获取认证token')
+      throw new Error('认证token获取失败')
+    }
+
+    console.log('✅ Upgrade API - 认证token获取成功')
     return {
       'Authorization': `Bearer ${token}`
     }
   } catch (error) {
-    console.error('❌ 获取认证头部失败:', error)
+    console.error('❌ Upgrade API - 获取认证头部失败:', error)
+    if (error instanceof Error) {
+      throw error
+    }
     throw new Error('缺少认证token')
   }
 }

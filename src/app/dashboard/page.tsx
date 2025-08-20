@@ -47,10 +47,15 @@ export default function DashboardPage() {
 
   // 等待Auth初始化完成后再加载数据
   useEffect(() => {
-    if (authInitialized) {
+    if (authInitialized && user) {
+      console.log('🔥 Dashboard: Auth已初始化且用户已登录，开始加载冲刺数据')
       loadSprints()
+    } else if (authInitialized && !user) {
+      console.log('🔥 Dashboard: Auth已初始化但用户未登录')
+    } else {
+      console.log('🔥 Dashboard: 等待Auth初始化...')
     }
-  }, [authInitialized, loadSprints])
+  }, [authInitialized, user, loadSprints])
 
   // 智能默认选择冲刺
   useEffect(() => {

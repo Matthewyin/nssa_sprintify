@@ -472,7 +472,7 @@ export default function Home() {
             <div className="space-y-4">
               <h4 className="font-medium text-foreground">友情链接</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="https://nssa.io" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">NSSA.io</a></li>
+                <li><a href="https://www.nssa.io" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">NSSA主站</a></li>
                 <li><a href="https://topfac.nssa.io" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">TopFac.NSSA.io</a></li>
                 <li><a href="https://tools.nssa.io" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">Tools.NSSA.io</a></li>
               </ul>

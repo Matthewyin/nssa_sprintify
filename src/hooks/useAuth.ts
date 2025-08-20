@@ -65,12 +65,14 @@ export function useAuthInitialized(): boolean {
 
   useEffect(() => {
     const initAuthCheck = () => {
-      if (auth.currentUser !== null) {
-        console.log('🔥 useAuthInitialized: 发现现有用户', auth.currentUser.uid)
+      // 检查当前用户状态（包括null和undefined）
+      if (auth.currentUser !== undefined) {
+        console.log('🔥 useAuthInitialized: Auth状态已确定', auth.currentUser ? `用户: ${auth.currentUser.uid}` : '未登录')
         setInitialized(true)
         return
       }
 
+      console.log('🔥 useAuthInitialized: 等待Auth状态确定...')
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         console.log('🔥 useAuthInitialized: 认证状态初始化完成', user ? `用户: ${user.uid}` : '未登录')
         setInitialized(true)

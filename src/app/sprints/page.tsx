@@ -49,7 +49,10 @@ export default function SprintsPage() {
   // 等待Auth初始化完成后再加载数据
   useEffect(() => {
     if (authInitialized) {
+      console.log('🔥 Sprints: Auth已初始化，开始加载冲刺数据')
       loadSprints()
+    } else {
+      console.log('🔥 Sprints: 等待Auth初始化...')
     }
   }, [authInitialized, loadSprints])
 
