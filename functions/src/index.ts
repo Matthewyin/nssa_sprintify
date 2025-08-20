@@ -22,7 +22,9 @@ const corsOptions = {
   origin: [
     "http://localhost:3000",
     "https://nssa-sprintify.web.app",
-    "https://nssa-sprintify.firebaseapp.com"
+    "https://nssa-sprintify.firebaseapp.com",
+    "https://nssa-sprintify--n8n-project-460516.us-central1.hosted.app",
+    "https://sf.nssa.io"
   ],
   credentials: true,
 };
