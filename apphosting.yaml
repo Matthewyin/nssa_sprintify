@@ -1,16 +1,26 @@
 runConfig:
   runtime: nodejs20
-  
+
 env:
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+    value: AIzaSyAQVuM1XSbFw_x3IQ0ZV98XwCWGbgFhIGM
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+    value: n8n-project-460516.firebaseapp.com
   - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
+    value: n8n-project-460516
   - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: ${{ secrets.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+    value: n8n-project-460516.firebasestorage.app
   - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    value: ${{ secrets.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+    value: "18068529376"
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: ${{ secrets.NEXT_PUBLIC_FIREBASE_APP_ID }}
+    value: 1:18068529376:web:d1fe5d7e4e53c2817a3085
+  - variable: NEXT_PUBLIC_FIREBASE_VAPID_KEY
+    value: demo-vapid-key
+  - variable: NEXT_PUBLIC_USE_FIREBASE_EMULATOR
+    value: "false"
+  - variable: NODE_ENV
+    value: production
+  - variable: NEXT_PUBLIC_APP_NAME
+    value: "NSSA Sprintify"
+  - variable: NEXT_PUBLIC_GEMINI_API_KEY
+    value: AIzaSyCdt1Z-MEwu4uLowDc5xBKuZw-HB4g9Iew
