@@ -195,6 +195,15 @@ class ApiClient {
  * 使用统一的环境配置
  */
 const getApiBaseUrl = () => {
+  // 调试信息
+  console.log('🔍 API配置调试信息:')
+  console.log('  - NODE_ENV:', process.env.NODE_ENV)
+  console.log('  - NEXT_PUBLIC_USE_FIREBASE_EMULATOR:', process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR)
+  console.log('  - NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL)
+  console.log('  - ENV_CONFIG.IS_DEVELOPMENT:', ENV_CONFIG.IS_DEVELOPMENT)
+  console.log('  - ENV_CONFIG.IS_PRODUCTION:', ENV_CONFIG.IS_PRODUCTION)
+  console.log('  - ENV_CONFIG.API.BASE_URL:', ENV_CONFIG.API.BASE_URL)
+
   // 如果有环境变量配置的API URL，优先使用它
   if (process.env.NEXT_PUBLIC_API_URL) {
     console.log('🔧 使用自定义API URL:', process.env.NEXT_PUBLIC_API_URL)
