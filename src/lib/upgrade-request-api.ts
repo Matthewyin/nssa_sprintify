@@ -10,16 +10,25 @@ import { auth } from '@/lib/firebase'
  */
 async function waitForAuthInit(): Promise<void> {
   return new Promise((resolve) => {
-    // 如果已经有用户或者明确没有用户，直接返回
-    if (auth.currentUser !== undefined) {
-      console.log('🔥 Upgrade API - Auth已初始化，当前用户:', auth.currentUser?.uid || '未登录')
+    // 如果已经有用户，直接返回
+    if (auth.currentUser) {
+      console.log('🔥 Upgrade API - Auth已初始化，当前用户:', auth.currentUser.uid)
       resolve()
       return
     }
 
     console.log('🔥 Upgrade API - 等待Auth初始化...')
+
+    // 设置超时时间（10秒）
+    const timeout = setTimeout(() => {
+      console.log('⚠️ Upgrade API - Auth初始化超时')
+      unsubscribe()
+      resolve() // 即使超时也继续，让后续逻辑处理
+    }, 10000)
+
     const unsubscribe = auth.onAuthStateChanged((user) => {
       console.log('🔥 Upgrade API - Auth状态变化:', user?.uid || '未登录')
+      clearTimeout(timeout)
       unsubscribe()
       resolve()
     })
@@ -27,36 +36,60 @@ async function waitForAuthInit(): Promise<void> {
 }
 
 /**
- * 获取认证头部
+ * 获取认证头部（带重试机制）
  */
 async function getAuthHeaders() {
-  try {
-    await waitForAuthInit()
+  const maxRetries = 3
+  const retryDelay = 1000 // 1秒
 
-    const user = auth.currentUser
-    if (!user) {
-      console.error('❌ Upgrade API - 用户未登录，当前用户状态:', user)
-      throw new Error('用户未登录，请先登录后再试')
-    }
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔥 Upgrade API - 尝试获取认证头部 (${attempt}/${maxRetries})`)
 
-    console.log('🔥 Upgrade API - 正在获取认证token...')
-    const token = await user.getIdToken(true) // 强制刷新token
-    if (!token) {
-      console.error('❌ Upgrade API - 无法获取认证token')
-      throw new Error('认证token获取失败')
-    }
+      // 等待Firebase Auth初始化完成
+      await waitForAuthInit()
 
-    console.log('✅ Upgrade API - 认证token获取成功')
-    return {
-      'Authorization': `Bearer ${token}`
+      const user = auth.currentUser
+      if (!user) {
+        console.warn(`⚠️ Upgrade API - 用户未登录 (尝试 ${attempt}/${maxRetries})，当前用户状态:`, user)
+
+        if (attempt < maxRetries) {
+          console.log(`🔄 Upgrade API - 等待 ${retryDelay}ms 后重试...`)
+          await new Promise(resolve => setTimeout(resolve, retryDelay))
+          continue
+        }
+
+        throw new Error('用户未登录，请先登录后再试')
+      }
+
+      console.log('🔥 Upgrade API - 正在获取认证token...')
+      const token = await user.getIdToken(true) // 强制刷新token
+      if (!token) {
+        console.error('❌ Upgrade API - 无法获取认证token')
+        throw new Error('认证token获取失败')
+      }
+
+      console.log('✅ Upgrade API - 认证token获取成功')
+      return {
+        'Authorization': `Bearer ${token}`
+      }
+    } catch (error) {
+      console.error(`❌ Upgrade API - 获取认证头部失败 (尝试 ${attempt}/${maxRetries}):`, error)
+
+      if (attempt === maxRetries) {
+        if (error instanceof Error) {
+          throw error
+        }
+        throw new Error('缺少认证token')
+      }
+
+      // 等待后重试
+      console.log(`🔄 Upgrade API - 等待 ${retryDelay}ms 后重试...`)
+      await new Promise(resolve => setTimeout(resolve, retryDelay))
     }
-  } catch (error) {
-    console.error('❌ Upgrade API - 获取认证头部失败:', error)
-    if (error instanceof Error) {
-      throw error
-    }
-    throw new Error('缺少认证token')
   }
+
+  throw new Error('获取认证头部失败')
 }
 
 // 升级申请相关类型定义
