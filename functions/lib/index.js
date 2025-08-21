@@ -59,7 +59,8 @@ const corsOptions = {
         "https://nssa-sprintify.web.app",
         "https://nssa-sprintify.firebaseapp.com",
         "https://nssa-sprintify--n8n-project-460516.us-central1.hosted.app",
-        "https://sf.nssa.io"
+        "https://sf.nssa.io",
+        "https://sf.netc2c.com"
     ],
     credentials: true,
 };
