@@ -25,10 +25,10 @@ export const ENV_CONFIG = {
   
   // API配置 - 反向代理模式
   API: {
-    // 开发环境使用模拟器，生产环境使用反向代理
-    BASE_URL: process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true'
+    // 开发环境且使用模拟器时使用本地API，否则使用反向代理
+    BASE_URL: (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true')
       ? 'http://127.0.0.1:5002/n8n-project-460516/asia-east1/api'
-      : '/api',  // 🔄 生产环境使用相对路径，通过反向代理访问
+      : '/api',  // 🔄 生产环境或非模拟器环境使用相对路径，通过反向代理访问
     TIMEOUT: 10000,
   },
   
