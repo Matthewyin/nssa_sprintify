@@ -23,12 +23,12 @@ export const ENV_CONFIG = {
     UI_PORT: 4003,
   },
   
-  // API配置
+  // API配置 - 反向代理模式
   API: {
-    // 根据Firebase模拟器配置决定使用本地还是生产API
+    // 开发环境使用模拟器，生产环境使用反向代理
     BASE_URL: process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === 'true'
       ? 'http://127.0.0.1:5002/n8n-project-460516/asia-east1/api'
-      : 'https://asia-east1-n8n-project-460516.cloudfunctions.net/api',
+      : '/api',  // 🔄 生产环境使用相对路径，通过反向代理访问
     TIMEOUT: 10000,
   },
   

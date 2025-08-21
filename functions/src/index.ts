@@ -17,17 +17,11 @@ admin.initializeApp();
 // 创建Express应用
 const app = express();
 
-// 配置CORS
+// 配置CORS - 反向代理模式（简化配置）
 const corsOptions = {
-  origin: [
-    "http://localhost:3000",
-    "https://nssa-sprintify.web.app",
-    "https://nssa-sprintify.firebaseapp.com",
-    "https://nssa-sprintify--n8n-project-460516.us-central1.hosted.app",
-    "https://sf.nssa.io",
-    "https://sf.netc2c.com"
-  ],
+  origin: true,  // 允许所有同源请求（通过反向代理）
   credentials: true,
+  optionsSuccessStatus: 200, // 支持旧版浏览器
 };
 app.use(cors(corsOptions));
 app.use(express.json());
